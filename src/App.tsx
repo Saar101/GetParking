@@ -1,10 +1,30 @@
+import { useEffect } from "react";
+import { db } from "./firebase";
+import { collection, addDoc } from "firebase/firestore";
+
+
+
+
 import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const testFirestore = async () => {
+      await addDoc(collection(db, "test"), {
+        message: "Firebase is connected!",
+        createdAt: new Date(),
+      });
+    };
+
+    testFirestore();
+  }, []);
+
+  
 
   return (
     <>
