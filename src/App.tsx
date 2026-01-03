@@ -1,55 +1,78 @@
-import { useEffect } from "react";
+import { useState } from "react";
+import "./App.css";
+
 import { db } from "./firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
+export default function App() {
+  const [status, setStatus] = useState<string>("Ready");
+  const [lastDocId, setLastDocId] = useState<string>("");
 
+  const writeTestDoc = async () => {
+    setLastDocId("");
 
+    // בדיקות env בלי לחשוף ערכים
+    console.log("apiKey loaded?", !!import.meta.env.VITE_FIREBASE_API_KEY);
+    console.log("projectId loaded?", !!import.meta.env.VITE_FIREBASE_PROJECT_ID);
 
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+    try {
+      setStatus("Writing to Firestore...");
 
-function App() {
-  const [count, setCount] = useState(0);
+      console.log("➡️ before addDoc");
 
-  useEffect(() => {
-    const testFirestore = async () => {
-      await addDoc(collection(db, "test"), {
-        message: "Firebase is connected!",
-        createdAt: new Date(),
+      // Timeout כדי שלא ניתקע לנצח
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Firestore write timed out (10s)")),
+          10000
+        )
+      );
+
+      const writePromise = addDoc(collection(db, "test"), {
+        message: "Firebase Firestore write test ✅",
+        createdAt: serverTimestamp(),
+        from: "React + TS (Vite)",
       });
-    };
 
-    testFirestore();
-  }, []);
+      const ref = await Promise.race([writePromise, timeout]);
 
-  
+      console.log("⬅️ after addDoc");
+      console.log("✅ Firestore doc created:", ref.id);
+
+      setLastDocId(ref.id);
+      setStatus(`✅ Success! Document created: ${ref.id}`);
+    } catch (err) {
+      console.error("❌ Firestore write failed:", err);
+      setStatus("❌ Write failed. Open DevTools Console (F12) for details.");
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    <div style={{ padding: 24 }}>
+      <h1>GetParking – Firestore Test</h1>
 
-export default App
+      <p>
+        Click the button to create a document in Firestore collection{" "}
+        <code>test</code>.
+      </p>
+
+      <button onClick={writeTestDoc}>Write test doc</button>
+
+      <p style={{ marginTop: 16, fontFamily: "monospace" }}>{status}</p>
+
+      {lastDocId && (
+        <p style={{ fontFamily: "monospace" }}>
+          Last Doc ID: <b>{lastDocId}</b>
+        </p>
+      )}
+
+      <hr style={{ margin: "24px 0" }} />
+
+      <p style={{ opacity: 0.85 }}>
+        If it times out, check Network tab for requests to{" "}
+        <code>firestore.googleapis.com</code>. If it fails with permissions,
+        update Firestore Rules or sign in with Auth.
+      </p>
+    </div>
+  );
+}
