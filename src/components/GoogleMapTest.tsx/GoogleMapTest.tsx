@@ -25,6 +25,10 @@ export default function GoogleMapTest() {
 
   const [initialCenter, setInitialCenter] = useState<LatLng>(FALLBACK_CENTER);
   const [userLocation, setUserLocation] = useState<LatLng | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    position: LatLng;
+    address: string;
+  } | null>(null);
   const [mapKey, setMapKey] = useState(0);
   const [searchText, setSearchText] = useState("");
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
@@ -119,7 +123,10 @@ export default function GoogleMapTest() {
     };
 
     setInitialCenter(location);
-    setUserLocation(location);
+    setSelectedLocation({
+      position: location,
+      address: result.display_name,
+    });
     setMapKey((k) => k + 1);
     setStatus("ready");
     setSearchText(result.display_name);
@@ -201,13 +208,26 @@ export default function GoogleMapTest() {
             key={mapKey}
             mapId={mapId}
             defaultCenter={initialCenter}
-            defaultZoom={userLocation ? 15 : 13}
+            defaultZoom={userLocation ? 15 : selectedLocation ? 16 : 13}
             gestureHandling="greedy"
             disableDefaultUI={false}
           >
             {userLocation && mapId && (
               <AdvancedMarker position={userLocation} title="You are here">
                 <div className="gmt-you-pin" />
+              </AdvancedMarker>
+            )}
+            {selectedLocation && mapId && (
+              <AdvancedMarker
+                position={selectedLocation.position}
+                title={selectedLocation.address}
+              >
+                <div className="gmt-location-marker">
+                  <div className="gmt-marker-icon">📍</div>
+                  <div className="gmt-marker-tooltip">
+                    {selectedLocation.address}
+                  </div>
+                </div>
               </AdvancedMarker>
             )}
           </Map>
