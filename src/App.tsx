@@ -10,6 +10,9 @@ import {
 import { Button } from "./components/Button";
 import { UserCard } from "./components/UserCard";
 
+// ✅ הוספה: קומפוננטת בדיקה למפה
+import GoogleMapTest from "./components/GoogleMapTest/GoogleMapTest";
+
 // 🔹 temporary hardcoded user (until Auth)
 const CURRENT_USER = {
   docId: "101",
@@ -68,6 +71,12 @@ export default function App() {
       </div>
 
       <p style={{ marginTop: 14, fontFamily: "monospace" }}>{status}</p>
+
+      {/* ✅ הוספה: המפה לבדיקה */}
+      <div style={{ marginTop: 24 }}>
+        <h2 style={{ marginBottom: 12 }}>Google Maps Test</h2>
+        <GoogleMapTest />
+      </div>
     </div>
   );
 }
