@@ -11,7 +11,7 @@ import { Button } from "./components/Button";
 import { UserCard } from "./components/UserCard";
 
 // ✅ הוספה: קומפוננטת בדיקה למפה
-import GoogleMapTest from "./components/GoogleMapTest/GoogleMapTest";
+import GoogleMapTest from "./components/GoogleMapTest.tsx/GoogleMapTest";
 
 // 🔹 temporary hardcoded user (until Auth)
 const CURRENT_USER = {
