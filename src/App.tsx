@@ -1,78 +1,66 @@
 import { useState } from "react";
 import "./App.css";
 
-import { db } from "./firebase";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { seedGetParkingData } from "./services/seed";
+import { assignCustomerToSpace, clearSpace } from "./services/parkingSpaces.service";
+import { addBookingHistoryId, setCustomerCurrentParking } from "./services/users.service";
 
 export default function App() {
-  const [status, setStatus] = useState<string>("Ready");
-  const [lastDocId, setLastDocId] = useState<string>("");
+  const [status, setStatus] = useState("Ready");
 
-  const writeTestDoc = async () => {
-    setLastDocId("");
-
-    // בדיקות env בלי לחשוף ערכים
-    console.log("apiKey loaded?", !!import.meta.env.VITE_FIREBASE_API_KEY);
-    console.log("projectId loaded?", !!import.meta.env.VITE_FIREBASE_PROJECT_ID);
-
+  const runSeed = async () => {
     try {
-      setStatus("Writing to Firestore...");
+      setStatus("Seeding...");
+      await seedGetParkingData();
+      setStatus("✅ Seed done (space starts as available)");
+    } catch (e: any) {
+      console.error(e);
+      setStatus(`❌ Seed failed: ${e?.message ?? "unknown error"}`);
+    }
+  };
 
-      console.log("➡️ before addDoc");
+  const occupyExample = async () => {
+    try {
+      setStatus("Occupying P015 for customer 101...");
+      await assignCustomerToSpace("P015", 101);
 
-      // Timeout כדי שלא ניתקע לנצח
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Firestore write timed out (10s)")),
-          10000
-        )
-      );
+      // Update customer fields (simple approach)
+      await addBookingHistoryId("101", "P015");
+      await setCustomerCurrentParking("101", "L01", "P015");
 
-      const writePromise = addDoc(collection(db, "test"), {
-        message: "Firebase Firestore write test ✅",
-        createdAt: serverTimestamp(),
-        from: "React + TS (Vite)",
-      });
+      setStatus("✅ Occupied + updated user history/current");
+    } catch (e: any) {
+      console.error(e);
+      setStatus(`❌ Occupy failed: ${e?.message ?? "unknown error"}`);
+    }
+  };
 
-      const ref = await Promise.race([writePromise, timeout]);
+  const clearExample = async () => {
+    try {
+      setStatus("Clearing P015...");
+      await clearSpace("P015");
 
-      console.log("⬅️ after addDoc");
-      console.log("✅ Firestore doc created:", ref.id);
+      // Clear customer's current linked space/lot
+      await setCustomerCurrentParking("101", null, null);
 
-      setLastDocId(ref.id);
-      setStatus(`✅ Success! Document created: ${ref.id}`);
-    } catch (err) {
-      console.error("❌ Firestore write failed:", err);
-      setStatus("❌ Write failed. Open DevTools Console (F12) for details.");
+      setStatus("✅ Cleared + user current cleared");
+    } catch (e: any) {
+      console.error(e);
+      setStatus(`❌ Clear failed: ${e?.message ?? "unknown error"}`);
     }
   };
 
   return (
     <div style={{ padding: 24 }}>
-      <h1>GetParking – Firestore Test</h1>
+      <h1>GetParking – Services Test</h1>
 
-      <p>
-        Click the button to create a document in Firestore collection{" "}
-        <code>test</code>.
-      </p>
-
-      <button onClick={writeTestDoc}>Write test doc</button>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <button onClick={runSeed}>Seed Data</button>
+        <button onClick={occupyExample}>Occupy P015 (customer 101)</button>
+        <button onClick={clearExample}>Clear P015</button>
+      </div>
 
       <p style={{ marginTop: 16, fontFamily: "monospace" }}>{status}</p>
-
-      {lastDocId && (
-        <p style={{ fontFamily: "monospace" }}>
-          Last Doc ID: <b>{lastDocId}</b>
-        </p>
-      )}
-
-      <hr style={{ margin: "24px 0" }} />
-
-      <p style={{ opacity: 0.85 }}>
-        If it times out, check Network tab for requests to{" "}
-        <code>firestore.googleapis.com</code>. If it fails with permissions,
-        update Firestore Rules or sign in with Auth.
-      </p>
     </div>
   );
 }
