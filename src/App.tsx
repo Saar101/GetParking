@@ -2,8 +2,8 @@ import { useState } from "react";
 import "./App.css";
 
 import { seedGetParkingData } from "./services/seed";
-import { assignCustomerToSpace, clearSpace } from "./services/parkingSpaces.service";
-import { addBookingHistoryId, setCustomerCurrentParking } from "./services/users.service";
+import { occupySpaceForCustomer, clearSpace } from "./services/parkingSpaces.service";
+import { setCustomerCurrentParking } from "./services/users.service";
 
 export default function App() {
   const [status, setStatus] = useState("Ready");
@@ -21,14 +21,10 @@ export default function App() {
 
   const occupyExample = async () => {
     try {
-      setStatus("Occupying P015 for customer 101...");
-      await assignCustomerToSpace("P015", 101);
+      setStatus("Occupying P015 for customer docId=101 (atomic)...");
+      await occupySpaceForCustomer("P015", "101"); // user doc id
 
-      // Update customer fields (simple approach)
-      await addBookingHistoryId("101", "P015");
-      await setCustomerCurrentParking("101", "L01", "P015");
-
-      setStatus("✅ Occupied + updated user history/current");
+      setStatus("✅ Occupied (space + user updated in one transaction)");
     } catch (e: any) {
       console.error(e);
       setStatus(`❌ Occupy failed: ${e?.message ?? "unknown error"}`);
@@ -40,7 +36,7 @@ export default function App() {
       setStatus("Clearing P015...");
       await clearSpace("P015");
 
-      // Clear customer's current linked space/lot
+      // כרגע עדיין מנקים את המשתמש בנפרד (אמרת clear נעשה אחר כך)
       await setCustomerCurrentParking("101", null, null);
 
       setStatus("✅ Cleared + user current cleared");
@@ -56,7 +52,7 @@ export default function App() {
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <button onClick={runSeed}>Seed Data</button>
-        <button onClick={occupyExample}>Occupy P015 (customer 101)</button>
+        <button onClick={occupyExample}>Occupy P015 (customer 101) – Atomic</button>
         <button onClick={clearExample}>Clear P015</button>
       </div>
 
