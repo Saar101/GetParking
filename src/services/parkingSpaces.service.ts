@@ -25,8 +25,8 @@ type UserDoc = {
   name: string;
   role: UserRole;
   bookingHistory?: string[];
-  parkingLotId?: string | null;
-  parkingSpaceId?: string | null;
+  parkingLotId?: string | null; // לבעל חניון
+  parkingSpaceId?: string | null; // ללקוח (לא חובה כאן)
   createdAt?: any;
 };
 
@@ -52,42 +52,42 @@ export async function updateParkingSpace(
   await updateDoc(doc(db, spacesCol, spaceId), patch as any);
 }
 
-export async function setSpaceStatus(spaceId: string, status: SpaceStatus) {
-  await updateParkingSpace(spaceId, { status });
-}
-
 /**
- * Guarded occupy (space-only transaction):
- * - checks availability
- * - occupies space
+ * ✅ ONLY Owner/Admin can manually edit a space status (mock permissions for now)
+ * actorUserDocId = doc id in /users (e.g. "201" owner, "1" admin)
  */
-export async function assignCustomerToSpace(
+export async function setSpaceStatusByOwnerOrAdmin(
   spaceId: string,
-  customerId: number,
-  dateTimeISO: string = new Date().toISOString()
+  actorUserDocId: string,
+  status: SpaceStatus,
+  customerId: number | null = null
 ) {
   const spaceRef = doc(db, spacesCol, spaceId);
+  const actorRef = doc(db, usersCol, actorUserDocId);
 
   return await runTransaction(db, async (tx) => {
-    const snap = await tx.get(spaceRef);
+    const [spaceSnap, actorSnap] = await Promise.all([
+      tx.get(spaceRef),
+      tx.get(actorRef),
+    ]);
 
-    if (!snap.exists()) {
-      throw new Error(`Space ${spaceId} not found`);
-    }
+    if (!spaceSnap.exists()) throw new Error(`Space ${spaceId} not found`);
+    if (!actorSnap.exists()) throw new Error(`User ${actorUserDocId} not found`);
 
-    const data = snap.data() as ParkingSpaceDoc;
+    const space = spaceSnap.data() as ParkingSpaceDoc;
+    const actor = actorSnap.data() as UserDoc;
 
-    if (data.status === "occupied") {
-      const current = data.customerId ?? "unknown";
-      throw new Error(
-        `Space ${spaceId} is already occupied (customerId: ${current})`
-      );
+    const isAdmin = actor.role === "admin";
+    const ownsLot = actor.role === "owner" && actor.parkingLotId === space.parkingLotId;
+
+    if (!isAdmin && !ownsLot) {
+      throw new Error("Not allowed: only owner of this lot or admin can edit space status");
     }
 
     tx.update(spaceRef, {
-      status: "occupied",
-      customerId,
-      dateTime: dateTimeISO,
+      status,
+      customerId: status === "occupied" ? customerId : null,
+      dateTime: new Date().toISOString(),
     });
 
     return { ok: true };
@@ -95,15 +95,8 @@ export async function assignCustomerToSpace(
 }
 
 /**
- * ✅ Atomic occupy (space + user) in ONE transaction:
- * - validates user exists and role === "customer"
- * - validates space exists and is available
- * - updates space -> occupied + customerId + dateTime
- * - updates user:
- *    - bookingHistory += spaceId (IDs only)
- *    - parkingLotId / parkingSpaceId set to current
- *
- * userDocId is the document ID in /users (e.g. "101")
+ * ✅ Customer occupy (atomic: space + user) in ONE transaction
+ * userDocId = doc id in /users (e.g. "101")
  */
 export async function occupySpaceForCustomer(
   spaceId: string,
@@ -119,12 +112,8 @@ export async function occupySpaceForCustomer(
       tx.get(userRef),
     ]);
 
-    if (!spaceSnap.exists()) {
-      throw new Error(`Space ${spaceId} not found`);
-    }
-    if (!userSnap.exists()) {
-      throw new Error(`User ${userDocId} not found`);
-    }
+    if (!spaceSnap.exists()) throw new Error(`Space ${spaceId} not found`);
+    if (!userSnap.exists()) throw new Error(`User ${userDocId} not found`);
 
     const space = spaceSnap.data() as ParkingSpaceDoc;
     const user = userSnap.data() as UserDoc;
@@ -135,30 +124,28 @@ export async function occupySpaceForCustomer(
 
     if (space.status === "occupied") {
       const current = space.customerId ?? "unknown";
-      throw new Error(
-        `Space ${spaceId} is already occupied (customerId: ${current})`
-      );
+      throw new Error(`Space ${spaceId} is already occupied (customerId: ${current})`);
     }
 
-    // Update space
+    // update space
     tx.update(spaceRef, {
       status: "occupied",
-      customerId: user.userId, // מזהה לקוח (number) מתוך המסמך
+      customerId: user.userId,
       dateTime: dateTimeISO,
     });
 
-    // Update user
+    // update user
     tx.update(userRef, {
       bookingHistory: arrayUnion(spaceId),
       parkingLotId: space.parkingLotId,
       parkingSpaceId: spaceId,
     } as any);
 
-    return { ok: true, customerId: user.userId, parkingLotId: space.parkingLotId };
+    return { ok: true };
   });
 }
 
-/** Clear a space (make available) */
+/** Clear a space (still simple for now) */
 export async function clearSpace(spaceId: string) {
   await updateParkingSpace(spaceId, {
     status: "available",
