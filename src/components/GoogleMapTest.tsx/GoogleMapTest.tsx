@@ -34,6 +34,7 @@ export default function GoogleMapTest() {
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocationSelected, setIsLocationSelected] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
   const [status, setStatus] = useState<
     "idle" | "locating" | "ready" | "denied" | "unsupported"
   >("idle");
@@ -148,7 +149,30 @@ export default function GoogleMapTest() {
   }
 
   return (
-    <div className="gmt-card">
+    <>
+      <button
+        className="gmt-open-button"
+        onClick={() => setIsMapOpen(true)}
+      >
+        🗺️ חפש כתובת
+      </button>
+
+      {isMapOpen && (
+        <>
+          <div
+            className="gmt-overlay"
+            onClick={() => setIsMapOpen(false)}
+          />
+          <div className="gmt-popover">
+            <button
+              className="gmt-close-button"
+              onClick={() => setIsMapOpen(false)}
+              aria-label="Close map"
+            >
+              ✕
+            </button>
+
+            <div className="gmt-card">
       <div className="gmt-header">
         <div>
           <h3 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "#07324a" }}>
@@ -162,8 +186,6 @@ export default function GoogleMapTest() {
             {status === "idle" && "⏳ Loading…"}
           </p>
         </div>
-
-        <span className="gmt-badge">Google Maps</span>
       </div>
 
       <div className="gmt-search-container">
@@ -233,6 +255,10 @@ export default function GoogleMapTest() {
           </Map>
         </APIProvider>
       </div>
-    </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }
