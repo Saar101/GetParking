@@ -11,6 +11,7 @@ import { Button } from "./components/Button";
 import { UserCard } from "./components/UserCard";
 import SidBar from "./components/SidBar/SidBar.tsx";
 import ParkingApproved from "./components/ParkingApproved/ParkingApproved";
+import ParkingInfo from "./components/ParkingInfo/ParkingInfo";
 
 // ✅ הוספה: קומפוננטת בדיקה למפה
 import GoogleMapTest from "./components/GoogleMapTest.tsx/GoogleMapTest";
@@ -25,6 +26,18 @@ const CURRENT_USER = {
 export default function App() {
   const [status, setStatus] = useState("Ready");
   const [showApproved, setShowApproved] = useState(false);
+  const [showParkingInfo, setShowParkingInfo] = useState(false);
+
+  const mockParkingSpace = {
+    id: "P001",
+    address: "רחוב בן גוריון 25, תל אביב",
+    price: 18,
+    distance: "250 מ' ממיקומך",
+    rating: 4.8,
+    reviews: 234,
+    available: true,
+    features: ["תאורה", "מצלמות אבטחה", "גדר", "מטענת חשמל"],
+  };
 
   const user = useMemo(() => CURRENT_USER, []);
 
@@ -74,6 +87,7 @@ export default function App() {
           <Button onClick={occupy}>Occupy</Button>
           <Button onClick={setAvailable}>Set Available</Button>
           <Button onClick={() => setShowApproved(true)}>Test Approved</Button>
+          <Button onClick={() => setShowParkingInfo(true)}>Test Parking Info</Button>
         </div>
 
         <p style={{ marginTop: 14, fontFamily: "monospace" }}>{status}</p>
@@ -86,6 +100,18 @@ export default function App() {
       </div>
 
       <ParkingApproved isOpen={showApproved} onClose={() => setShowApproved(false)} />
+      <ParkingInfo 
+        isOpen={showParkingInfo} 
+        onClose={() => setShowParkingInfo(false)}
+        parkingSpace={mockParkingSpace}
+        onBook={() => {
+          console.log('Book clicked');
+          setShowParkingInfo(false);
+        }}
+        onRecommend={() => {
+          console.log('Recommend clicked');
+        }}
+      />
     </>
   );
 }
