@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+import { useEffect, useState, useRef } from "react";
+import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import "./GoogleMapTest.css";
 
 type LatLng = {
@@ -18,6 +18,194 @@ const FALLBACK_CENTER: LatLng = {
   lat: 31.7683,
   lng: 35.2137, // Jerusalem
 };
+
+// Inner component to use useMap hook
+function MapContent({
+  userLocation,
+  selectedLocation,
+  mapId,
+  radius,
+  circleRef,
+}: {
+  userLocation: LatLng | null;
+  selectedLocation: { position: LatLng; address: string } | null;
+  mapId: string | undefined;
+  radius: number;
+  circleRef: React.MutableRefObject<any>;
+}) {
+  const map = useMap();
+  const animationRef = useRef<number | null>(null);
+  const targetRadiusRef = useRef<number>(250);
+
+  // Create circle when location changes
+  useEffect(() => {
+    if (!map || !selectedLocation) {
+      return;
+    }
+
+    // Cancel any ongoing animation
+    if (animationRef.current !== null) {
+      cancelAnimationFrame(animationRef.current);
+    }
+
+    try {
+      // Clear old circle
+      if (circleRef.current) {
+        circleRef.current.setMap(null);
+      }
+
+      // Create circle with radius 0 for animation
+      targetRadiusRef.current = radius;
+      circleRef.current = new (window as any).google.maps.Circle({
+        strokeColor: "#0a79b3",
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: "#0a79b3",
+        fillOpacity: 0.15,
+        map: map,
+        center: selectedLocation.position,
+        radius: 0, // Start from 0 for nice entrance animation
+      });
+
+      // Animate the radius from 0 to target with bounce effect
+      const startTime = Date.now();
+      const animationDuration = 900; // 0.9 seconds for entrance animation
+      const targetRadius = radius;
+
+      const animateEntrance = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / animationDuration, 1);
+
+        // Bounce easing for entrance - elastic feel
+        let easedProgress = progress < 0.5
+          ? 2 * progress * progress // ease-in first half
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2; // ease-out second half
+
+        // Add extra bounce/spring at the end
+        if (easedProgress > 0.7) {
+          const bounceAmount = (easedProgress - 0.7) * 1.5;
+          easedProgress = easedProgress + bounceAmount;
+        }
+
+        const currentRadius = targetRadius * Math.min(easedProgress, 1);
+
+        if (circleRef.current) {
+          circleRef.current.setRadius(currentRadius);
+        }
+
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animateEntrance);
+        } else {
+          // Ensure final radius is set
+          if (circleRef.current) {
+            circleRef.current.setRadius(targetRadius);
+          }
+        }
+      };
+
+      animationRef.current = requestAnimationFrame(animateEntrance);
+      console.log("✅ Circle created with entrance animation!");
+    } catch (error) {
+      console.error("❌ Error creating circle:", error);
+    }
+
+    // Cleanup
+    return () => {
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [map, selectedLocation]);
+
+  // Smooth animation for radius changes
+  useEffect(() => {
+    if (!circleRef.current || !selectedLocation) {
+      return;
+    }
+
+    // Cancel any ongoing animation
+    if (animationRef.current !== null) {
+      cancelAnimationFrame(animationRef.current);
+    }
+
+    const startRadius = circleRef.current.getRadius();
+    const endRadius = radius;
+    targetRadiusRef.current = radius;
+
+    // Skip animation if radius hasn't changed
+    if (Math.abs(startRadius - endRadius) < 1) {
+      return;
+    }
+
+    const startTime = Date.now();
+    const animationDuration = 600; // 0.6 seconds for smooth scroll
+    const direction = endRadius > startRadius ? 1 : -1; // going up or down
+
+    const animateRadius = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / animationDuration, 1);
+
+      // Smooth easing with a slight bounce/spring
+      // y = t < 0.5 ? 2t² : -1 + (4 - 2t)t
+      let easedProgress = progress < 0.5
+        ? 2 * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+      // Add a subtle bounce by overshooting slightly then settling
+      if (easedProgress > 0.8) {
+        const overshootAmount = (easedProgress - 0.8) * 0.15;
+        easedProgress = easedProgress + overshootAmount * direction;
+      }
+
+      const currentRadius = startRadius + (endRadius - startRadius) * easedProgress;
+
+      if (circleRef.current && targetRadiusRef.current === radius) {
+        circleRef.current.setRadius(currentRadius);
+      }
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animateRadius);
+      } else {
+        // Ensure final radius is set
+        if (circleRef.current && targetRadiusRef.current === radius) {
+          circleRef.current.setRadius(endRadius);
+        }
+      }
+    };
+
+    animationRef.current = requestAnimationFrame(animateRadius);
+
+    // Cleanup
+    return () => {
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [radius, selectedLocation]);
+
+  return (
+    <>
+      {userLocation && mapId && (
+        <AdvancedMarker position={userLocation} title="You are here">
+          <div className="gmt-you-pin" />
+        </AdvancedMarker>
+      )}
+      {selectedLocation && mapId && (
+        <AdvancedMarker
+          position={selectedLocation.position}
+          title={selectedLocation.address}
+        >
+          <div className="gmt-location-marker">
+            <div className="gmt-marker-icon">📍</div>
+            <div className="gmt-marker-tooltip">
+              {selectedLocation.address}
+            </div>
+          </div>
+        </AdvancedMarker>
+      )}
+    </>
+  );
+}
 
 export default function GoogleMapTest() {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
@@ -38,6 +226,10 @@ export default function GoogleMapTest() {
   const [status, setStatus] = useState<
     "idle" | "locating" | "ready" | "denied" | "unsupported"
   >("idle");
+  const [radius, setRadius] = useState(250); // in meters
+  const [isRadiusExpanded, setIsRadiusExpanded] = useState(false);
+  const [isRadiusClosing, setIsRadiusClosing] = useState(false);
+  const circleRef = useRef<any>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -117,6 +309,11 @@ export default function GoogleMapTest() {
     return () => clearTimeout(timeoutId);
   }, [searchText, isLocationSelected]);
 
+  // Handle radius changes - update circle on map
+  useEffect(() => {
+    console.log("Radius changed:", radius);
+  }, [radius]);
+
   const handleLocationSelect = (result: NominatimResult) => {
     const location: LatLng = {
       lat: parseFloat(result.lat),
@@ -190,6 +387,45 @@ export default function GoogleMapTest() {
 
       <div className="gmt-search-container">
         <div className="gmt-search-wrapper">
+          <button
+            className="gmt-radius-button"
+            onClick={() => {
+              if (isRadiusExpanded) {
+                setIsRadiusClosing(true);
+              } else {
+                setIsRadiusExpanded(true);
+              }
+            }}
+          >
+            <span className="gmt-radius-button-icon">📍</span>
+            <span className="gmt-radius-button-text">{radius} מ'</span>
+          </button>
+          
+          {(isRadiusExpanded || isRadiusClosing) && (
+            <div 
+              className={`gmt-radius-expanded ${isRadiusClosing ? 'closing' : ''}`}
+              onAnimationEnd={() => {
+                if (isRadiusClosing) {
+                  setIsRadiusClosing(false);
+                  setIsRadiusExpanded(false);
+                }
+              }}
+            >
+              <label htmlFor="radius-slider">🎯 בחר רדיוס:</label>
+              <input
+                id="radius-slider"
+                type="range"
+                min="50"
+                max="500"
+                step="50"
+                value={radius}
+                onChange={(e) => setRadius(Number(e.target.value))}
+                className="gmt-radius-slider"
+              />
+              <span className="gmt-radius-value">{radius} מ'</span>
+            </div>
+          )}
+
           <input
             type="text"
             className="gmt-search-input"
@@ -234,24 +470,13 @@ export default function GoogleMapTest() {
             gestureHandling="greedy"
             disableDefaultUI={false}
           >
-            {userLocation && mapId && (
-              <AdvancedMarker position={userLocation} title="You are here">
-                <div className="gmt-you-pin" />
-              </AdvancedMarker>
-            )}
-            {selectedLocation && mapId && (
-              <AdvancedMarker
-                position={selectedLocation.position}
-                title={selectedLocation.address}
-              >
-                <div className="gmt-location-marker">
-                  <div className="gmt-marker-icon">📍</div>
-                  <div className="gmt-marker-tooltip">
-                    {selectedLocation.address}
-                  </div>
-                </div>
-              </AdvancedMarker>
-            )}
+            <MapContent
+              userLocation={userLocation}
+              selectedLocation={selectedLocation}
+              mapId={mapId}
+              radius={radius}
+              circleRef={circleRef}
+            />
           </Map>
         </APIProvider>
       </div>
