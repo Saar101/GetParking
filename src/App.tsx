@@ -6,6 +6,7 @@ import GoogleMapTest from "./components/GoogleMapTest.tsx/GoogleMapTest";
 import ParkingApproved from "./components/ParkingApproved/ParkingApproved";
 import ParkingInfo from "./components/ParkingInfo/ParkingInfo";
 import SidBar from "./components/SidBar/SidBar";
+import logo from "./assets/ChatGPT Image Jan 26, 2026, 08_22_00 PM.png";
 
 export default function App() {
   const [status, setStatus] = useState("Ready");
@@ -47,7 +48,9 @@ export default function App() {
       </button>
 
       <div style={{ padding: 24 }}>
-      <h1>GetParking</h1>
+      <div className="gp-title-container">
+        <img src={logo} alt="GetParking" className="gp-title-logo" />
+      </div>
 
       <div style={{ marginTop: 32, display: "flex", justifyContent: "center", alignItems: "center" }}>
         <button

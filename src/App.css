@@ -104,6 +104,60 @@
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-22px);
   }
+}
+
+@keyframes scalePulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-12px);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Title Emoji */
+.gp-title-emoji {
+  font-size: 64px;
+  margin: 0;
+  animation: float 3s ease-in-out infinite;
+  display: inline-block;
+}
+
+/* Title Logo */
+.gp-title-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.gp-title-logo {
+  width: 600px;
+  height: auto;
+  animation: float 3s ease-in-out infinite;
 }
