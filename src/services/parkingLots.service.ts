@@ -4,6 +4,11 @@ import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 export type ParkingLotDoc = {
   parkingLotId: string;
   name: string;
+  address: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
   demandScore: number;
   basePrice: number;
   salePrice?: number | null;
@@ -39,3 +44,18 @@ export async function incrementDemandScore(lotId: string, by: number = 1) {
   const current = typeof lot?.demandScore === "number" ? lot.demandScore : 0;
   await updateParkingLot(lotId, { demandScore: current + by });
 }
+
+// Example parking lot data (can be used for reference or future migrations)
+// const exampleParkingLot: ParkingLotDoc = {
+//   parkingLotId: "P001",
+//   name: "חנייה בן גוריון",
+//   address: "רחוב בן גוריון 25, תל אביב",
+//   location: {
+//     lat: 32.0853,
+//     lng: 34.7818
+//   },
+//   demandScore: 5,
+//   basePrice: 18,
+//   ownerId: 123,
+//   createdAt: new Date()
+// };

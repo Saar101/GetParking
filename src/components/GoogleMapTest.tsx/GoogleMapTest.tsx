@@ -207,7 +207,7 @@ function MapContent({
   );
 }
 
-export default function GoogleMapTest() {
+export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined;
   const mapId = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as string | undefined;
 
@@ -222,7 +222,6 @@ export default function GoogleMapTest() {
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isLocationSelected, setIsLocationSelected] = useState(false);
-  const [isMapOpen, setIsMapOpen] = useState(false);
   const [status, setStatus] = useState<
     "idle" | "locating" | "ready" | "denied" | "unsupported"
   >("idle");
@@ -347,23 +346,16 @@ export default function GoogleMapTest() {
 
   return (
     <>
-      <button
-        className="gmt-open-button"
-        onClick={() => setIsMapOpen(true)}
-      >
-        🗺️ חפש כתובת
-      </button>
-
-      {isMapOpen && (
+      {isOpen && (
         <>
           <div
             className="gmt-overlay"
-            onClick={() => setIsMapOpen(false)}
+            onClick={onClose}
           />
           <div className="gmt-popover">
             <button
               className="gmt-close-button"
-              onClick={() => setIsMapOpen(false)}
+              onClick={onClose}
               aria-label="Close map"
             >
               ✕
