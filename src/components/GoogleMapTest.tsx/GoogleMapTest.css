@@ -615,6 +615,58 @@
   animation: tooltipPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Parking lot marker */
+.gmt-parking-lot-marker {
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: markerDrop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.gmt-parking-lot-pin {
+  font-size: 34px;
+  filter: drop-shadow(0 4px 8px rgba(10, 121, 179, 0.32));
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.gmt-parking-lot-marker:hover .gmt-parking-lot-pin {
+  transform: translateY(-4px) scale(1.08);
+}
+
+.gmt-parking-lot-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 2px solid rgba(8, 80, 120, 0.16);
+  background: white;
+  color: #07324a;
+  font-size: 12px;
+  box-shadow: 0 6px 20px rgba(7, 50, 74, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 1000;
+}
+
+.gmt-parking-lot-tooltip strong {
+  font-size: 13px;
+}
+
+.gmt-parking-lot-marker:hover .gmt-parking-lot-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-18px);
+}
+
+
 @keyframes tooltipPop {
   0% {
     opacity: 0;

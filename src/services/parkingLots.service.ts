@@ -1,5 +1,5 @@
 import { db } from "../firebase";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, increment, setDoc, updateDoc } from "firebase/firestore";
 
 export type ParkingLotDoc = {
   parkingLotId: string;
@@ -10,6 +10,7 @@ export type ParkingLotDoc = {
     lng: number;
   };
   demandScore: number;
+  recommendationCount?: number;
   basePrice: number;
   salePrice?: number | null;
   ownerId: number;
@@ -25,6 +26,15 @@ export async function createParkingLot(lotId: string, data: ParkingLotDoc) {
 export async function getParkingLot(lotId: string) {
   const snap = await getDoc(doc(db, lotsCol, lotId));
   return snap.exists() ? snap.data() : null;
+}
+
+export async function listParkingLots() {
+  const snap = await getDocs(collection(db, lotsCol));
+
+  return snap.docs.map((lotDoc) => ({
+    id: lotDoc.id,
+    ...(lotDoc.data() as ParkingLotDoc),
+  }));
 }
 
 export async function updateParkingLot(
@@ -43,6 +53,12 @@ export async function incrementDemandScore(lotId: string, by: number = 1) {
   const lot = await getParkingLot(lotId);
   const current = typeof lot?.demandScore === "number" ? lot.demandScore : 0;
   await updateParkingLot(lotId, { demandScore: current + by });
+}
+
+export async function addParkingLotRecommendation(lotId: string) {
+  await updateDoc(doc(db, lotsCol, lotId), {
+    recommendationCount: increment(1),
+  });
 }
 
 // Example parking lot data (can be used for reference or future migrations)

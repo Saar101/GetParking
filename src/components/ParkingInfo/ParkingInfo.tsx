@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import './ParkingInfo.css';
 
 interface ParkingSpace {
@@ -6,7 +7,7 @@ interface ParkingSpace {
   price: number;
   distance: string;
   rating: number;
-  reviews: number;
+  recommendationCount: number;
   available: boolean;
   features?: string[];
 }
@@ -17,6 +18,7 @@ interface ParkingInfoProps {
   parkingSpace: ParkingSpace;
   onBook: () => void;
   onRecommend: () => void;
+  recommendationDisabled?: boolean;
 }
 
 export default function ParkingInfo({ 
@@ -24,9 +26,37 @@ export default function ParkingInfo({
   onClose, 
   parkingSpace, 
   onBook, 
-  onRecommend 
+  onRecommend,
+  recommendationDisabled = false
 }: ParkingInfoProps) {
+  const [hasRecommendedLocal, setHasRecommendedLocal] = useState(false);
+  const [isCelebrating, setIsCelebrating] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setHasRecommendedLocal(false);
+      setIsCelebrating(false);
+      return;
+    }
+
+    setHasRecommendedLocal(false);
+    setIsCelebrating(false);
+  }, [isOpen, parkingSpace?.id]);
+
   if (!isOpen || !parkingSpace) return null;
+
+  const isRecommendationLocked = recommendationDisabled || hasRecommendedLocal;
+
+  const handleRecommend = () => {
+    if (isRecommendationLocked) {
+      return;
+    }
+
+    setHasRecommendedLocal(true);
+    setIsCelebrating(true);
+    window.setTimeout(() => setIsCelebrating(false), 750);
+    onRecommend();
+  };
 
   return (
     <div className="parking-info-overlay" onClick={onClose}>
@@ -37,7 +67,7 @@ export default function ParkingInfo({
           <h2>{parkingSpace.address}</h2>
           <div className="parking-rating">
             <span className="stars">⭐ {parkingSpace.rating.toFixed(1)}</span>
-            <span className="reviews">({parkingSpace.reviews} ביקורות)</span>
+            <span className="reviews">({parkingSpace.recommendationCount} המלצות)</span>
           </div>
         </div>
 
@@ -82,10 +112,11 @@ export default function ParkingInfo({
             🔖 הזמנת חנייה
           </button>
           <button 
-            className="action-button recommend-button"
-            onClick={onRecommend}
+            className={`action-button recommend-button ${isCelebrating ? 'recommend-button--celebrating' : ''} ${isRecommendationLocked ? 'recommend-button--locked' : ''}`}
+            onClick={handleRecommend}
+            disabled={isRecommendationLocked}
           >
-            👍 המלצה
+            {isRecommendationLocked ? '✅ הומלץ' : '👍 המלצה'}
           </button>
         </div>
       </div>

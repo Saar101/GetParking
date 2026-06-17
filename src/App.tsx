@@ -20,7 +20,7 @@ export default function App() {
     price: 18,
     distance: "250 מ' ממיקומך",
     rating: 4.8,
-    reviews: 234,
+    recommendationCount: 234,
     available: true,
     features: ["תאורה", "מצלמות אבטחה", "גדר", "מטענת חשמל"],
   };
@@ -39,6 +39,15 @@ export default function App() {
   return (
     <>
       <SidBar />
+      <div style={{ position: 'fixed', top: 20, left: 20, zIndex: 1100 }}>
+        <button
+          onClick={runSeed}
+          style={{ padding: '8px 12px', borderRadius: 8, background: '#08507a', color: 'white', border: 'none', cursor: 'pointer' }}
+          title="Seed Firestore with test data"
+        >
+          Run seed
+        </button>
+      </div>
       <button
         className="gmt-open-button-circular"
         onClick={() => setShowMap(true)}

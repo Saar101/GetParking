@@ -1,10 +1,28 @@
 import { useEffect, useState, useRef } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
+import { addParkingLotRecommendation, listParkingLots, type ParkingLotDoc } from "../../services/parkingLots.service";
+import ParkingApproved from "../ParkingApproved/ParkingApproved";
+import ParkingInfo from "../ParkingInfo/ParkingInfo";
 import "./GoogleMapTest.css";
 
 type LatLng = {
   lat: number;
   lng: number;
+};
+
+type ParkingLotMarker = ParkingLotDoc & {
+  id: string;
+};
+
+type ParkingInfoCard = {
+  id: string;
+  address: string;
+  price: number;
+  distance: string;
+  rating: number;
+  recommendationCount: number;
+  available: boolean;
+  features: string[];
 };
 
 type NominatimResult = {
@@ -19,6 +37,50 @@ const FALLBACK_CENTER: LatLng = {
   lng: 35.2137, // Jerusalem
 };
 
+function distanceMeters(a: LatLng, b: LatLng) {
+  const earthRadius = 6371000;
+  const toRadians = (value: number) => (value * Math.PI) / 180;
+
+  const deltaLat = toRadians(b.lat - a.lat);
+  const deltaLng = toRadians(b.lng - a.lng);
+  const lat1 = toRadians(a.lat);
+  const lat2 = toRadians(b.lat);
+
+  const haversine =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) *
+      Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+
+  return 2 * earthRadius * Math.asin(Math.sqrt(haversine));
+}
+
+function toParkingInfoCard(
+  lot: ParkingLotMarker,
+  center: LatLng | null,
+  lotsInRadius: ParkingLotMarker[]
+): ParkingInfoCard {
+  const distance = center ? distanceMeters(center, lot.location) : 0;
+  const recommendationCount = Math.max(0, lot.recommendationCount ?? 0);
+  const maxRecommendations = Math.max(
+    0,
+    ...lotsInRadius.map((item) => Math.max(0, item.recommendationCount ?? 0))
+  );
+  const rating = maxRecommendations > 0
+    ? 1 + (recommendationCount / maxRecommendations) * 4
+    : 1;
+
+  return {
+    id: lot.id,
+    address: `${lot.name} • ${lot.address}`,
+    price: lot.salePrice ?? lot.basePrice,
+    distance: `${Math.round(distance)} מ' מהמיקום שנבחר`,
+    rating: Math.min(5, Math.max(1, rating)),
+    recommendationCount,
+    available: true,
+    features: ["חניון פעיל", "מיקום בתוך הרדיוס"],
+  };
+}
+
 // Inner component to use useMap hook
 function MapContent({
   userLocation,
@@ -26,12 +88,16 @@ function MapContent({
   mapId,
   radius,
   circleRef,
+  parkingLots,
+  onParkingLotClick,
 }: {
   userLocation: LatLng | null;
   selectedLocation: { position: LatLng; address: string } | null;
   mapId: string | undefined;
   radius: number;
   circleRef: React.MutableRefObject<any>;
+  parkingLots: ParkingLotMarker[];
+  onParkingLotClick: (lot: ParkingLotMarker) => void;
 }) {
   const map = useMap();
   const animationRef = useRef<number | null>(null);
@@ -203,6 +269,29 @@ function MapContent({
           </div>
         </AdvancedMarker>
       )}
+      {parkingLots.map((lot) => (
+        <AdvancedMarker key={lot.id} position={lot.location} title={lot.name}>
+          <div
+            className="gmt-parking-lot-marker"
+            onClick={() => onParkingLotClick(lot)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onParkingLotClick(lot);
+              }
+            }}
+          >
+            <div className="gmt-parking-lot-pin">🅿️</div>
+            <div className="gmt-parking-lot-tooltip">
+              <strong>{lot.name}</strong>
+              <span>{lot.address}</span>
+              <span>₪{lot.salePrice ?? lot.basePrice}/שעה</span>
+            </div>
+          </div>
+        </AdvancedMarker>
+      ))}
     </>
   );
 }
@@ -228,6 +317,11 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
   const [radius, setRadius] = useState(250); // in meters
   const [isRadiusExpanded, setIsRadiusExpanded] = useState(false);
   const [isRadiusClosing, setIsRadiusClosing] = useState(false);
+  const [parkingLots, setParkingLots] = useState<ParkingLotMarker[]>([]);
+  const [selectedParkingLot, setSelectedParkingLot] = useState<ParkingInfoCard | null>(null);
+  const [recommendedLotIds, setRecommendedLotIds] = useState<string[]>([]);
+  const [isRecommending, setIsRecommending] = useState(false);
+  const [showApproved, setShowApproved] = useState(false);
   const circleRef = useRef<any>(null);
 
   useEffect(() => {
@@ -266,6 +360,34 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
       }
     );
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadParkingLots = async () => {
+      try {
+        const lots = await listParkingLots();
+        if (isMounted) {
+          setParkingLots(lots);
+        }
+      } catch (error) {
+        console.error("Error loading parking lots:", error);
+        if (isMounted) {
+          setParkingLots([]);
+        }
+      }
+    };
+
+    void loadParkingLots();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   // Search using Nominatim (OpenStreetMap)
   useEffect(() => {
@@ -312,6 +434,57 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
   useEffect(() => {
     console.log("Radius changed:", radius);
   }, [radius]);
+
+  const mapCenter = selectedLocation?.position ?? userLocation;
+  const parkingLotsInRadius = mapCenter
+    ? parkingLots.filter((lot) => distanceMeters(mapCenter, lot.location) <= radius)
+    : [];
+
+  const handleParkingLotClick = (lot: ParkingLotMarker) => {
+    setSelectedParkingLot(toParkingInfoCard(lot, mapCenter, parkingLotsInRadius));
+  };
+
+  const handleRecommendParkingLot = async () => {
+    if (!selectedParkingLot || recommendedLotIds.includes(selectedParkingLot.id) || isRecommending) {
+      return;
+    }
+
+    setIsRecommending(true);
+    try {
+      await addParkingLotRecommendation(selectedParkingLot.id);
+      setRecommendedLotIds((current) => [...current, selectedParkingLot.id]);
+      setParkingLots((current) => {
+        const updatedLots = current.map((lot) => {
+          if (lot.id !== selectedParkingLot.id) {
+            return lot;
+          }
+
+          return {
+            ...lot,
+            recommendationCount: (lot.recommendationCount ?? 0) + 1,
+          };
+        });
+
+        const updatedMapCenter = selectedLocation?.position ?? userLocation;
+        const updatedLotsInRadius = updatedMapCenter
+          ? updatedLots.filter((lot) => distanceMeters(updatedMapCenter, lot.location) <= radius)
+          : [];
+        const updatedSelectedLot = updatedLots.find((lot) => lot.id === selectedParkingLot.id);
+
+        if (updatedSelectedLot) {
+          setSelectedParkingLot(
+            toParkingInfoCard(updatedSelectedLot, updatedMapCenter, updatedLotsInRadius)
+          );
+        }
+
+        return updatedLots;
+      });
+    } catch (error) {
+      console.error("Error adding parking lot recommendation:", error);
+    } finally {
+      setIsRecommending(false);
+    }
+  };
 
   const handleLocationSelect = (result: NominatimResult) => {
     const location: LatLng = {
@@ -468,10 +641,30 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
               mapId={mapId}
               radius={radius}
               circleRef={circleRef}
+              parkingLots={parkingLotsInRadius}
+              onParkingLotClick={handleParkingLotClick}
             />
-          </Map>
-        </APIProvider>
-      </div>
+                </Map>
+              </APIProvider>
+            </div>
+
+      <ParkingInfo
+        isOpen={selectedParkingLot !== null}
+        onClose={() => setSelectedParkingLot(null)}
+        parkingSpace={selectedParkingLot as any}
+        onBook={() => {
+          setSelectedParkingLot(null);
+          setShowApproved(true);
+        }}
+        onRecommend={handleRecommendParkingLot}
+        recommendationDisabled={
+          !selectedParkingLot ? false : recommendedLotIds.includes(selectedParkingLot.id) || isRecommending
+        }
+      />
+      <ParkingApproved
+        isOpen={showApproved}
+        onClose={() => setShowApproved(false)}
+      />
             </div>
           </div>
         </>

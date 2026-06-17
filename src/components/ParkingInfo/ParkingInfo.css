@@ -184,7 +184,8 @@
   color: white;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
-
+  position: relative;
+  overflow: hidden;
 .book-button:hover:not(:disabled) {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
@@ -196,6 +197,129 @@
   animation: buttonBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+.recommend-button--celebrating {
+  animation: recommendationCelebrate 0.9s cubic-bezier(0.34, 1.56, 0.64, 1), recommendationPulse 0.9s ease-out, recommendationRainbow 0.9s ease-out;
+  background: linear-gradient(135deg, #f97316 0%, #f59e0b 30%, #eab308 60%, #f43f5e 100%);
+  color: white;
+  border-color: #f59e0b;
+  box-shadow:
+    0 10px 26px rgba(245, 158, 11, 0.35),
+    0 0 0 0 rgba(245, 158, 11, 0.35),
+    0 0 22px rgba(244, 63, 94, 0.35);
+}
+
+.recommend-button--celebrating::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.2) 18%, transparent 35%),
+    radial-gradient(circle at 70% 35%, rgba(59,130,246,0.75) 0%, rgba(59,130,246,0.15) 16%, transparent 32%),
+    radial-gradient(circle at 50% 70%, rgba(236,72,153,0.75) 0%, rgba(236,72,153,0.15) 16%, transparent 32%),
+    radial-gradient(circle at center, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.12) 35%, transparent 72%);
+  animation: recommendationGlow 0.9s ease-out;
+  pointer-events: none;
+}
+
+.recommend-button--locked {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.2) 0%, rgba(100, 116, 139, 0.15) 100%);
+  color: #64748b;
+  border: 1.5px solid rgba(148, 163, 184, 0.45);
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.92;
+  transform: none;
+}
+
+.recommend-button--locked:hover,
+.recommend-button--locked:active {
+  transform: none;
+  box-shadow: none;
+}
+
+.recommend-button--locked::after {
+  content: 'נעול';
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  padding: 2px 6px;
+}
+
+@keyframes recommendationCelebrate {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.14) rotate(-3deg);
+  }
+  55% {
+    transform: scale(1.02) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes recommendationGlow {
+  0% {
+    opacity: 1;
+    transform: scale(0.65);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.65);
+  }
+}
+
+.recommend-button--celebrating {
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.3);
+  animation-name: recommendationCelebrate, recommendationPulse, recommendationSparkle;
+  animation-duration: 0.9s, 0.9s, 0.9s;
+  animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1), ease-out, ease-out;
+}
+
+@keyframes recommendationPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 18px rgba(245, 158, 11, 0);
+  }
+}
+
+@keyframes recommendationRainbow {
+  0% {
+    filter: saturate(1) brightness(1);
+  }
+  40% {
+    filter: saturate(1.35) brightness(1.08);
+  }
+  100% {
+    filter: saturate(1.1) brightness(1);
+  }
+}
+
+@keyframes recommendationSparkle {
+  0% {
+    text-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+  30% {
+    text-shadow:
+      0 0 8px rgba(255, 255, 255, 0.95),
+      0 0 18px rgba(59, 130, 246, 0.55),
+      0 0 28px rgba(236, 72, 153, 0.45);
+  }
+  100% {
+    text-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
 .book-button:disabled {
   background: #d1d5db;
   color: #9ca3af;

@@ -14,9 +14,10 @@ export async function seedGetParkingData() {
   const lots = [
     {
       id: "L01",
-      name: "חניון בן גוריון",
-      address: "רחוב בן גוריון 25, תל אביב",
-      location: { lat: 32.0853, lng: 34.7818 },
+      name: "חניון בדיקה A",
+      address: "מיקום בדיקה קרוב אליך",
+      // ~150m NE from provided center (31.768245,35.193791)
+      location: { lat: 31.76955, lng: 35.1957 },
       ownerId: 201,
     },
     {
@@ -28,9 +29,10 @@ export async function seedGetParkingData() {
     },
     {
       id: "L03",
-      name: "חניון אלנבי",
-      address: "אלנבי 150, תל אביב",
-      location: { lat: 32.0770, lng: 34.7650 },
+      name: "חניון בדיקה B",
+      address: "מיקום בדיקה קרוב אליך",
+      // ~220m SE from provided center (31.768245,35.193791)
+      location: { lat: 31.7663, lng: 35.1952 },
       ownerId: 201,
     },
   ];
@@ -44,6 +46,7 @@ export async function seedGetParkingData() {
         address: lot.address,
         location: lot.location,
         demandScore: Math.floor(Math.random() * 10),
+        recommendationCount: 0,
         basePrice: Math.floor(Math.random() * 30) + 15,
         salePrice: null,
         ownerId: lot.ownerId,
