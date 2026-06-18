@@ -165,7 +165,10 @@
 
 .chat-consultation-panel__body {
   padding: 18px 22px 22px;
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .chat-consultation-panel__composer {
@@ -205,13 +208,17 @@
   flex-direction: column;
   gap: 14px;
   margin-bottom: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .chat-consultation-message {
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  animation: chatConsultationMessageIn 0.32s ease-out;
+  animation: chatConsultationMessageIn 0.18s ease-out both;
 }
 
 .chat-consultation-message--assistant {
@@ -247,12 +254,17 @@
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
   color: #0f172a;
   line-height: 1.7;
+  transform-origin: 14% 100%;
+  animation: chatConsultationBubblePop 0.46s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--chat-bubble-delay, 0ms);
+  will-change: transform, opacity;
 }
 
 .chat-consultation-message__bubble--user {
   background: linear-gradient(135deg, rgba(236, 253, 245, 0.98) 0%, rgba(220, 252, 231, 0.96) 100%);
   border-color: rgba(34, 197, 94, 0.22);
   border-radius: 22px 22px 8px 22px;
+  transform-origin: 86% 100%;
 }
 
 .chat-consultation-message__bubble--typing {
@@ -511,11 +523,32 @@
 @keyframes chatConsultationMessageIn {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.98);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes chatConsultationBubblePop {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.72);
+    filter: blur(1px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.05);
+    filter: blur(0);
+  }
+  78% {
+    transform: translateY(1px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
     transform: translateY(0) scale(1);
+    filter: blur(0);
   }
 }
 

@@ -58,7 +58,13 @@ function buildRecommendationMessages(normalizedPayload) {
 }
 
 function buildFollowupMessages(payload, parsedConversation) {
-  const parkingLotSummary = payload.parkingLotsInRadius
+  const parkingLots = Array.isArray(payload?.parkingLots)
+    ? payload.parkingLots
+    : Array.isArray(payload?.parkingLotsInRadius)
+      ? payload.parkingLotsInRadius
+      : [];
+
+  const parkingLotSummary = parkingLots
     .map((lot) => `- ${lot.id}: ${lot.name}, מרחק ${lot.distanceMeters} מ', מחיר ₪${lot.price}, הנחה ${lot.salePrice ?? 'אין'}, המלצות ${lot.recommendationCount}, זמין ${lot.available ? 'כן' : 'לא'}`)
     .join('\n');
 
@@ -80,6 +86,31 @@ function tryParseJSON(text) {
   try {
     return JSON.parse(text);
   } catch (e) {
+    const cleanedText = String(text ?? '')
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```\s*$/i, '');
+
+    if (cleanedText !== String(text ?? '').trim()) {
+      try {
+        return JSON.parse(cleanedText);
+      } catch (innerError) {
+        return null;
+      }
+    }
+
+    const firstBrace = cleanedText.indexOf('{');
+    const lastBrace = cleanedText.lastIndexOf('}');
+
+    if (firstBrace >= 0 && lastBrace > firstBrace) {
+      const slicedText = cleanedText.slice(firstBrace, lastBrace + 1);
+      try {
+        return JSON.parse(slicedText);
+      } catch (innerError) {
+        return null;
+      }
+    }
+
     return null;
   }
 }
@@ -103,7 +134,7 @@ function rankParkingLots(parkingLots) {
     .sort((a, b) => b.score - a.score);
 }
 
-function localRank(parkingLots) {
+function localRank(parkingLots, sourceReason = 'local_rank') {
   let best = null;
   const rankedLots = rankParkingLots(parkingLots);
 
@@ -117,6 +148,7 @@ function localRank(parkingLots) {
     recommendedLotId: best?.lot?.id ?? null,
     explanation: `נבחר על סמך דירוג מקומי (קרבה, מחיר, מבצעים והמלצות).`,
     source: 'local',
+    sourceReason,
     rankedLots: rankedLots.map((lot) => ({
       id: lot.id,
       name: lot.name,
@@ -134,19 +166,38 @@ export async function getRecommendation(payload) {
   const normalizedPayload = normalizeRecommendationPayload(payload);
   const parkingLots = normalizedPayload.parkingLots;
 
+  console.info('[GetParking Server] recommendation payload normalized', {
+    radiusMeters: normalizedPayload.radiusMeters,
+    selectedLotId: normalizedPayload.selectedLotId ?? null,
+    lotCount: parkingLots.length,
+  });
+
   if (!Array.isArray(parkingLots) || parkingLots.length === 0) {
-    return { recommendedLotId: null, explanation: 'אין חניונים ברדיוס המבוקש', source: 'local' };
+    console.info('[GetParking Server] no lots available for recommendation');
+    return { recommendedLotId: null, explanation: 'אין חניונים ברדיוס המבוקש', source: 'local', sourceReason: 'no_lots' };
   }
 
   try {
+    console.info('[GetParking Server] sending recommendation prompt to OpenAI', {
+      lotCount: parkingLots.length,
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    });
     const ai = await callOpenAI(buildRecommendationMessages(normalizedPayload));
     const text = ai?.choices?.[0]?.message?.content ?? ai?.choices?.[0]?.text ?? JSON.stringify(ai);
+    console.info('[GetParking Server] received recommendation response from OpenAI', {
+      hasText: Boolean(text),
+      textPreview: String(text).slice(0, 160),
+    });
     const parsed = tryParseJSON(text);
     if (parsed && parsed.recommendedLotId) {
+      console.info('[GetParking Server] parsed OpenAI recommendation successfully', {
+        recommendedLotId: parsed.recommendedLotId,
+      });
       return {
         recommendedLotId: parsed.recommendedLotId,
         explanation: parsed.explanation ?? 'התקבלה המלצה מהמודל',
         source: 'openai',
+        sourceReason: 'openai_success',
         rankedLots: rankParkingLots(parkingLots).map((lot) => ({
           id: lot.id,
           name: lot.name,
@@ -161,11 +212,11 @@ export async function getRecommendation(payload) {
       };
     }
   } catch (e) {
-    console.warn('OpenAI failed, falling back to local ranking', e?.message ?? e);
+    console.warn('[GetParking Server] OpenAI failed, falling back to local ranking', e?.message ?? e);
   }
 
   // fallback
-  return localRank(parkingLots);
+  return localRank(parkingLots, 'openai_failed');
 }
 
 export async function getFollowupResponse(payload) {
@@ -178,8 +229,10 @@ export async function getFollowupResponse(payload) {
     : [];
 
   if (payload?.source !== 'openai') {
+    console.info('[GetParking Server] follow-up blocked because source is local');
     return {
       source: 'local',
+      sourceReason: 'followup_blocked_local',
       reply: 'כרגע אפשר להמשיך שיחה רק אם ההמלצה הראשונית הגיעה מה־OpenAI. כרגע התקבלה תשובה מקומית.',
     };
   }
@@ -187,6 +240,7 @@ export async function getFollowupResponse(payload) {
   if (!parkingLots.length) {
     return {
       source: 'local',
+      sourceReason: 'no_lots',
       reply: 'אין מספיק נתונים להמשך שיחה כרגע.',
     };
   }
@@ -194,16 +248,27 @@ export async function getFollowupResponse(payload) {
   const followupMessages = buildFollowupMessages(normalizedPayload, priorMessages);
 
   try {
+    console.info('[GetParking Server] sending follow-up prompt to OpenAI', {
+      messageCount: followupMessages.length,
+      lotCount: parkingLots.length,
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    });
     const ai = await callOpenAI(followupMessages, process.env.OPENAI_MODEL || 'gpt-4o-mini');
     const reply = ai?.choices?.[0]?.message?.content ?? 'לא הצלחתי לנסח תשובה כרגע';
+    console.info('[GetParking Server] received follow-up response from OpenAI', {
+      hasReply: Boolean(reply),
+      replyPreview: String(reply).slice(0, 160),
+    });
     return {
       source: 'openai',
+      sourceReason: 'openai_followup_success',
       reply,
     };
   } catch (e) {
-    console.warn('OpenAI follow-up failed', e?.message ?? e);
+    console.warn('[GetParking Server] OpenAI follow-up failed', e?.message ?? e);
     return {
       source: 'local',
+      sourceReason: 'openai_followup_failed',
       reply: 'לא הצלחתי להמשיך את השיחה כרגע. נסה שוב כששרת המודל זמין.',
     };
   }

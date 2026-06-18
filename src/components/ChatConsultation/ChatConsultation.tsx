@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   requestParkingRecommendation,
   requestParkingFollowup,
@@ -41,6 +41,7 @@ export default function ChatConsultation({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [result, setResult] = useState<ParkingRecommendationResult | null>(null);
   const [chatInput, setChatInput] = useState("");
+  const [showRankingBubble, setShowRankingBubble] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
@@ -53,6 +54,7 @@ export default function ChatConsultation({
       content: "תמליץ לי על החניון הכי משתלם לפי מרחק, מחיר והמלצות.",
     },
   ]);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const conversationMessages = useMemo(() => {
     if (result?.source === "local") {
@@ -76,31 +78,15 @@ export default function ChatConsultation({
   );
 
   useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [chatMessages, isLoading, isFollowupLoading, result]);
+
+  useEffect(() => {
     if (!result) {
       return;
     }
 
-    setChatMessages([
-      {
-        role: "assistant",
-        kind: "intro",
-        content: "שלום, אני בודק עכשיו את החניונים שקרובים אליך ומכין המלצה נעימה וקצרה.",
-      },
-      {
-        role: "user",
-        kind: "followup",
-        content: "תמליץ לי על החניון הכי משתלם לפי מרחק, מחיר והמלצות.",
-      },
-      {
-        role: "assistant",
-        kind: "recommendation",
-        source: result.source,
-        content:
-          `${result.source === "openai" ? "ההמלצה הגיעה מ־OpenAI." : "ההמלצה חושבה מקומית."} ` +
-          `החניון המומלץ הוא ${recommendedLot ? recommendedLot.name : result.recommendedLotId ?? "לא נמצא"}. ` +
-          result.explanation,
-      },
-    ]);
+    setShowRankingBubble(true);
     setChatInput("");
   }, [recommendedLot, result]);
 
@@ -121,25 +107,11 @@ export default function ChatConsultation({
         parkingLotsInRadius: parkingLots,
       });
       setResult(response);
-      if (response.source === "openai") {
-        setChatMessages((current) => [
-          ...current,
-          {
-            role: "assistant",
-            kind: "recommendation",
-            source: response.source,
-            content:
-              `ההמלצה הגיעה מ־OpenAI. ` +
-              `החניון המומלץ הוא ${parkingLots.find((lot) => lot.id === response.recommendedLotId)?.name ?? response.recommendedLotId ?? "לא נמצא"}. ` +
-              response.explanation,
-          },
-        ]);
-      }
+      setShowRankingBubble(true);
     } catch (error: any) {
       setErrorMessage(error?.message ?? "לא הצלחנו לקבל המלצה כרגע");
     } finally {
       setIsLoading(false);
-    }
   };
 
   const handlePickRecommended = () => {
@@ -158,7 +130,7 @@ export default function ChatConsultation({
 
     if (!question || !result || !canContinueConversation || isFollowupLoading) {
       return;
-    }
+        setShowRankingBubble(true);
 
     const userMessage: ChatMessage = {
       role: "user",
@@ -170,6 +142,7 @@ export default function ChatConsultation({
     setChatMessages(nextMessages);
     setChatInput("");
     setIsFollowupLoading(true);
+    setShowRankingBubble(false);
 
     try {
       const followup = await requestParkingFollowup({
@@ -178,7 +151,7 @@ export default function ChatConsultation({
         mapCenter,
         radiusMeters,
         parkingLotsInRadius: parkingLots,
-        messages: nextMessages
+        setShowRankingBubble(false);
           .filter((message) => message.role === "assistant" || message.role === "user")
           .map((message) => ({
             role: message.role,
@@ -250,7 +223,7 @@ export default function ChatConsultation({
             </div>
 
             <div className="chat-consultation-panel__body">
-              <div className="chat-consultation-thread">
+              <div className="chat-consultation-thread" role="log" aria-live="polite" aria-relevant="additions text">
                 {conversationMessages.map((message, index) => (
                   <div
                     key={`${message.role}-${index}-${message.content.slice(0, 12)}`}
@@ -264,6 +237,9 @@ export default function ChatConsultation({
 
                     <div
                       className={`chat-consultation-message__bubble ${message.role === "user" ? "chat-consultation-message__bubble--user" : ""} ${message.kind === "error" ? "chat-consultation-message__bubble--error" : ""}`}
+                      style={{
+                        ["--chat-bubble-delay" as string]: `${Math.min(index * 85, 340)}ms`,
+                      }}
                     >
                       {message.kind === "recommendation" ? (
                         <>
@@ -323,21 +299,8 @@ export default function ChatConsultation({
                   </div>
                 )}
 
-                {!isLoading && !errorMessage && result && (
+                {!isLoading && !errorMessage && result && showRankingBubble && (
                   <>
-                    <div className="chat-consultation-message chat-consultation-message--assistant">
-                      <div className="chat-consultation-message__avatar">🤖</div>
-                      <div className="chat-consultation-message__bubble">
-                        <div className="chat-consultation-message__title">הנה מה שמצאתי עבורך</div>
-                        <div className="chat-consultation-message__recommendation">
-                          {recommendedLot ? recommendedLot.name : result.recommendedLotId}
-                        </div>
-                        <div className="chat-consultation-message__explanation">
-                          {result.explanation}
-                        </div>
-                      </div>
-                    </div>
-
                     <div className="chat-consultation-message chat-consultation-message--assistant">
                       <div className="chat-consultation-message__avatar">📋</div>
                       <div className="chat-consultation-message__bubble chat-consultation-message__bubble--compact">
@@ -388,6 +351,8 @@ export default function ChatConsultation({
                     </div>
                   </>
                 )}
+
+                <div ref={messagesEndRef} />
               </div>
 
               <div className="chat-consultation-panel__composer">
