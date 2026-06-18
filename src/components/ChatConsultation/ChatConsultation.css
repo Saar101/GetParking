@@ -1,0 +1,531 @@
+.chat-consultation-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 148px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 16px;
+  color: #0f172a;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.98) 0%, rgba(220, 252, 231, 0.96) 55%, rgba(209, 250, 229, 0.94) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.22);
+  box-shadow: 0 10px 22px rgba(16, 185, 129, 0.12);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease, border-color 0.25s ease;
+  overflow: hidden;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.chat-consultation-button:hover:not(:disabled) {
+  transform: translateY(-1px) scale(1.01);
+  border-color: rgba(34, 197, 94, 0.34);
+  box-shadow:
+    0 14px 28px rgba(16, 185, 129, 0.18),
+    0 0 0 1px rgba(34, 197, 94, 0.08),
+    0 0 22px rgba(52, 211, 153, 0.28);
+  filter: saturate(1.05) brightness(1.01);
+}
+
+.chat-consultation-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  box-shadow: none;
+  filter: grayscale(0.1);
+}
+
+.chat-consultation-button__icon {
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.25s ease, filter 0.25s ease;
+}
+
+.chat-consultation-button:hover:not(:disabled) .chat-consultation-button__icon {
+  transform: scale(1.12) rotate(-4deg);
+  filter: drop-shadow(0 0 10px rgba(34, 197, 94, 0.35));
+  animation: chatConsultationSmile 0.7s ease-in-out infinite;
+}
+
+.chat-consultation-button__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+}
+
+.chat-consultation-button__title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.1px;
+}
+
+.chat-consultation-button__subtitle {
+  font-size: 11px;
+  opacity: 0.75;
+  font-weight: 600;
+}
+
+.chat-consultation-button::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(120deg, transparent 25%, rgba(255, 255, 255, 0.55) 50%, transparent 75%);
+  transform: translateX(-120%);
+  transition: transform 0.65s ease;
+  pointer-events: none;
+}
+
+.chat-consultation-button:hover:not(:disabled)::before {
+  transform: translateX(120%);
+}
+
+@keyframes chatConsultationSmile {
+  0%, 100% {
+    transform: scale(1.12) rotate(-4deg) translateY(0);
+  }
+  50% {
+    transform: scale(1.2) rotate(4deg) translateY(-1px);
+  }
+}
+
+.chat-consultation-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.42);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10005;
+  padding: 18px;
+  animation: chatConsultationOverlayFade 0.22s ease-out;
+}
+
+.chat-consultation-panel {
+  width: min(720px, 100%);
+  max-height: min(86vh, 860px);
+  overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(248, 250, 255, 0.96) 100%);
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  direction: rtl;
+  display: flex;
+  flex-direction: column;
+  transform-origin: center center;
+  animation: chatConsultationPanelPop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.chat-consultation-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 22px 16px;
+  background: linear-gradient(135deg, rgba(224, 231, 255, 0.82) 0%, rgba(236, 253, 245, 0.72) 100%);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.chat-consultation-panel__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.chat-consultation-panel__subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #475569;
+}
+
+.chat-consultation-panel__close {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  font-size: 18px;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chat-consultation-panel__close:hover {
+  background: rgba(15, 23, 42, 0.12);
+  transform: scale(1.08) rotate(-4deg);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
+}
+
+.chat-consultation-panel__close:active {
+  transform: scale(0.94) rotate(0deg);
+}
+
+.chat-consultation-panel__body {
+  padding: 18px 22px 22px;
+  overflow: auto;
+}
+
+.chat-consultation-panel__composer {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+  margin-bottom: 14px;
+}
+
+.chat-consultation-panel__input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.96);
+  color: #0f172a;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.chat-consultation-panel__input:focus {
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+}
+
+.chat-consultation-panel__input:disabled {
+  background: rgba(241, 245, 249, 0.9);
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.chat-consultation-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.chat-consultation-message {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  animation: chatConsultationMessageIn 0.32s ease-out;
+}
+
+.chat-consultation-message--assistant {
+  justify-content: flex-start;
+}
+
+.chat-consultation-message--user {
+  justify-content: flex-end;
+}
+
+.chat-consultation-message__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(226, 232, 240, 0.96) 0%, rgba(191, 219, 254, 0.9) 100%);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  flex-shrink: 0;
+}
+
+.chat-consultation-message__avatar--user {
+  background: linear-gradient(135deg, rgba(209, 250, 229, 0.96) 0%, rgba(167, 243, 208, 0.92) 100%);
+}
+
+.chat-consultation-message__bubble {
+  max-width: min(78%, 560px);
+  padding: 14px 16px;
+  border-radius: 22px 22px 22px 8px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+  line-height: 1.7;
+}
+
+.chat-consultation-message__bubble--user {
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.98) 0%, rgba(220, 252, 231, 0.96) 100%);
+  border-color: rgba(34, 197, 94, 0.22);
+  border-radius: 22px 22px 8px 22px;
+}
+
+.chat-consultation-message__bubble--typing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-consultation-message__bubble--error {
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.96) 0%, rgba(255, 237, 213, 0.94) 100%);
+  border-color: rgba(248, 113, 113, 0.24);
+}
+
+.chat-consultation-message__bubble--compact {
+  max-width: min(84%, 580px);
+}
+
+.chat-consultation-message__title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.chat-consultation-message__recommendation {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.chat-consultation-message__explanation {
+  font-size: 14px;
+  color: #334155;
+}
+
+.chat-consultation-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chat-consultation-typing span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: chatConsultationTyping 1s infinite ease-in-out;
+}
+
+.chat-consultation-typing span:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.chat-consultation-typing span:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
+.chat-consultation-panel__empty,
+.chat-consultation-panel__loading,
+.chat-consultation-panel__error {
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.chat-consultation-panel__loading {
+  background: linear-gradient(135deg, rgba(224, 231, 255, 0.65) 0%, rgba(224, 255, 245, 0.55) 100%);
+  color: #1d4ed8;
+}
+
+.chat-consultation-panel__error {
+  background: linear-gradient(135deg, rgba(254, 226, 226, 0.95) 0%, rgba(255, 237, 213, 0.9) 100%);
+  color: #b91c1c;
+}
+
+.chat-consultation-panel__summary {
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.1) 0%, rgba(37, 99, 235, 0.08) 100%);
+  border: 1px solid rgba(37, 99, 235, 0.14);
+}
+
+.chat-consultation-panel__summary-label {
+  font-size: 12px;
+  color: #334155;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.chat-consultation-panel__recommendation {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.chat-consultation-panel__explanation {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.7;
+}
+
+.chat-consultation-panel__actions {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0 20px;
+  flex-wrap: wrap;
+}
+
+.chat-consultation-panel__action {
+  border: none;
+  border-radius: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.chat-consultation-panel__action:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.01);
+  filter: brightness(1.03) saturate(1.04);
+}
+
+.chat-consultation-panel__action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.chat-consultation-panel__action:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.chat-consultation-panel__action::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, transparent 28%, rgba(255, 255, 255, 0.38) 50%, transparent 72%);
+  transform: translateX(-130%);
+  transition: transform 0.7s ease;
+  pointer-events: none;
+}
+
+.chat-consultation-panel__action:hover:not(:disabled)::before {
+  transform: translateX(130%);
+}
+
+.chat-consultation-panel__action--primary {
+  background: linear-gradient(135deg, #2563eb 0%, #0f766e 100%);
+  color: white;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.22);
+}
+
+.chat-consultation-panel__action--secondary {
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}
+
+.chat-consultation-panel__list-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.chat-consultation-panel__list {
+  display: grid;
+  gap: 10px;
+}
+
+.chat-consultation-panel__item {
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  display: grid;
+  gap: 6px;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.chat-consultation-panel__item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37, 99, 235, 0.24);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+}
+
+.chat-consultation-panel__item--recommended {
+  border-color: rgba(37, 99, 235, 0.35);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.96) 0%, rgba(236, 253, 245, 0.9) 100%);
+}
+
+.chat-consultation-panel__item-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.chat-consultation-panel__item-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #475569;
+}
+
+.chat-consultation-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.chat-consultation-panel__footer {
+  margin-top: 16px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+@keyframes chatConsultationOverlayFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes chatConsultationPanelPop {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.88);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes chatConsultationMessageIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes chatConsultationTyping {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  40% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}

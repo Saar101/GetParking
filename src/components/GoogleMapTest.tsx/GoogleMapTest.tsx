@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { addParkingLotRecommendation, listParkingLots, type ParkingLotDoc } from "../../services/parkingLots.service";
+import ChatConsultation from "../ChatConsultation/ChatConsultation";
 import ParkingApproved from "../ParkingApproved/ParkingApproved";
 import ParkingInfo from "../ParkingInfo/ParkingInfo";
 import "./GoogleMapTest.css";
@@ -444,6 +445,16 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
     setSelectedParkingLot(toParkingInfoCard(lot, mapCenter, parkingLotsInRadius));
   };
 
+  const handleSelectRecommendedLot = (lotId: string) => {
+    const lot = parkingLots.find((item) => item.id === lotId);
+
+    if (!lot) {
+      return;
+    }
+
+    setSelectedParkingLot(toParkingInfoCard(lot, mapCenter, parkingLotsInRadius));
+  };
+
   const handleRecommendParkingLot = async () => {
     if (!selectedParkingLot || recommendedLotIds.includes(selectedParkingLot.id) || isRecommending) {
       return;
@@ -590,6 +601,26 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
               <span className="gmt-radius-value">{radius} מ'</span>
             </div>
           )}
+
+          <ChatConsultation
+            parkingLots={parkingLotsInRadius.map((lot) => {
+              const distance = mapCenter ? distanceMeters(mapCenter, lot.location) : 0;
+
+              return {
+                id: lot.id,
+                name: lot.name,
+                distanceMeters: distance,
+                price: lot.salePrice ?? lot.basePrice,
+                salePrice: lot.salePrice ?? null,
+                recommendationCount: lot.recommendationCount ?? 0,
+                available: true,
+              };
+            })}
+            mapCenter={mapCenter}
+            radiusMeters={radius}
+            selectedLotId={selectedParkingLot?.id ?? null}
+            onSelectRecommendedLot={handleSelectRecommendedLot}
+          />
 
           <input
             type="text"
