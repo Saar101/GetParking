@@ -112,6 +112,7 @@ export default function ChatConsultation({
       setErrorMessage(error?.message ?? "לא הצלחנו לקבל המלצה כרגע");
     } finally {
       setIsLoading(false);
+    }
   };
 
   const handlePickRecommended = () => {
@@ -130,7 +131,7 @@ export default function ChatConsultation({
 
     if (!question || !result || !canContinueConversation || isFollowupLoading) {
       return;
-        setShowRankingBubble(true);
+    }
 
     const userMessage: ChatMessage = {
       role: "user",
@@ -145,18 +146,20 @@ export default function ChatConsultation({
     setShowRankingBubble(false);
 
     try {
+      const messages = nextMessages
+        .filter((message) => message.role === "assistant" || message.role === "user")
+        .map((message) => ({
+          role: message.role,
+          content: message.content,
+        })) as ParkingFollowupMessage[];
+
       const followup = await requestParkingFollowup({
         source: result.source,
-        selectedLotId: result.recommendedLotId,
+        selectedLotId: result.recommendedLotId ?? null,
         mapCenter,
         radiusMeters,
         parkingLotsInRadius: parkingLots,
-        setShowRankingBubble(false);
-          .filter((message) => message.role === "assistant" || message.role === "user")
-          .map((message) => ({
-            role: message.role,
-            content: message.content,
-          })) as ParkingFollowupMessage[],
+        messages,
       });
 
       setChatMessages((current) => [
