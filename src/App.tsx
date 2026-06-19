@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./App.css";
 
 import { seedGetParkingData } from "./services/seed";
+import { resetAllParkingSpacesToAvailable } from "./services/parkingSpaces.service";
 import GoogleMapTest from "./components/GoogleMapTest.tsx/GoogleMapTest";
 import ParkingApproved from "./components/ParkingApproved/ParkingApproved";
 import ParkingInfo from "./components/ParkingInfo/ParkingInfo";
@@ -36,6 +37,17 @@ export default function App() {
     }
   };
 
+  const resetParkingSpaces = async () => {
+    try {
+      setStatus("Resetting spaces...");
+      const result = await resetAllParkingSpacesToAvailable();
+      setStatus(`✅ Reset done (${result.count} spaces)`);
+    } catch (e: any) {
+      console.error(e);
+      setStatus(`❌ Reset failed: ${e?.message ?? "unknown error"}`);
+    }
+  };
+
   return (
     <>
       <SidBar />
@@ -46,6 +58,13 @@ export default function App() {
           title="Seed Firestore with test data"
         >
           Run seed
+        </button>
+        <button
+          onClick={resetParkingSpaces}
+          style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: '#0a79b3', color: 'white', border: 'none', cursor: 'pointer' }}
+          title="Reset all parking spaces to available"
+        >
+          Reset spaces
         </button>
       </div>
       <button

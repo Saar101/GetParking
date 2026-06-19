@@ -2,14 +2,26 @@ import { db } from "../firebase";
 import {
   doc,
   getDoc,
+  getDocs,
+  collection,
   setDoc,
   updateDoc,
   runTransaction,
   arrayUnion,
 } from "firebase/firestore";
 
-export type SpaceStatus = "available" | "occupied";
+export type SpaceStatus = "available" | "occupied" | "reserved";
 export type UserRole = "customer" | "owner" | "admin";
+
+export type ParkingReservationDoc = {
+  date: string;
+  startTime: string;
+  durationHours: number;
+  reservedFrom: string;
+  reservedUntil: string;
+  customerId?: number | null;
+  createdAt?: any;
+};
 
 export type ParkingSpaceDoc = {
   parkingSpaceId: string;
@@ -17,6 +29,7 @@ export type ParkingSpaceDoc = {
   status: SpaceStatus;
   dateTime: string; // ISO string
   customerId?: number | null; // מזהה לקוח בלבד
+  reservation?: ParkingReservationDoc | null;
   createdAt?: any;
 };
 
@@ -50,6 +63,123 @@ export async function updateParkingSpace(
   patch: Partial<ParkingSpaceDoc>
 ) {
   await updateDoc(doc(db, spacesCol, spaceId), patch as any);
+}
+
+export async function getFirstAvailableParkingSpaceForLot(lotId: string) {
+  const snap = await getDocs(collection(db, spacesCol));
+  const availableSpace = snap.docs
+    .map((spaceDoc) => ({
+      id: spaceDoc.id,
+      ...(spaceDoc.data() as ParkingSpaceDoc),
+    }))
+    .filter((space) => space.parkingLotId === lotId && space.status === "available")
+    .sort((left, right) => left.id.localeCompare(right.id))[0];
+
+  if (!availableSpace) {
+    return null;
+  }
+
+  return {
+    ...availableSpace,
+  };
+}
+
+export async function resetAllParkingSpacesToAvailable() {
+  const snap = await getDocs(collection(db, spacesCol));
+
+  await Promise.all(
+    snap.docs.map((spaceDoc) =>
+      updateDoc(doc(db, spacesCol, spaceDoc.id), {
+        status: "available",
+        customerId: null,
+        reservation: null,
+        dateTime: new Date().toISOString(),
+      } as any)
+    )
+  );
+
+  return { ok: true, count: snap.docs.length };
+}
+
+function buildReservationWindow(date: string, startTime: string, durationHours: number) {
+  const start = new Date(`${date}T${startTime}:00`);
+  const end = new Date(start.getTime() + durationHours * 60 * 60 * 1000);
+
+  return {
+    reservedFrom: start.toISOString(),
+    reservedUntil: end.toISOString(),
+  };
+}
+
+export async function reserveParkingSpaceForCustomer(
+  spaceId: string,
+  reservation: {
+    date: string;
+    startTime: string;
+    durationHours: number;
+    customerId?: number | null;
+  }
+) {
+  const spaceRef = doc(db, spacesCol, spaceId);
+
+  return await runTransaction(db, async (tx) => {
+    const spaceSnap = await tx.get(spaceRef);
+
+    if (!spaceSnap.exists()) {
+      throw new Error(`Space ${spaceId} not found`);
+    }
+
+    const space = spaceSnap.data() as ParkingSpaceDoc;
+
+    if (space.status === "reserved" || space.status === "occupied") {
+      throw new Error(`Space ${spaceId} is already reserved or occupied`);
+    }
+
+    const reservationWindow = buildReservationWindow(
+      reservation.date,
+      reservation.startTime,
+      reservation.durationHours
+    );
+
+    tx.update(spaceRef, {
+      status: "reserved",
+      customerId: reservation.customerId ?? null,
+      dateTime: new Date().toISOString(),
+      reservation: {
+        date: reservation.date,
+        startTime: reservation.startTime,
+        durationHours: reservation.durationHours,
+        ...reservationWindow,
+        customerId: reservation.customerId ?? null,
+        createdAt: new Date().toISOString(),
+      },
+    } as any);
+
+    return { ok: true, spaceId, reservation: { ...reservation, ...reservationWindow } };
+  });
+}
+
+export async function reserveFirstAvailableParkingSpaceForCustomer(
+  lotId: string,
+  reservation: {
+    date: string;
+    startTime: string;
+    durationHours: number;
+    customerId?: number | null;
+  }
+) {
+  const availableSpace = await getFirstAvailableParkingSpaceForLot(lotId);
+
+  if (!availableSpace) {
+    throw new Error(`No available parking spaces found for lot ${lotId}`);
+  }
+
+  const result = await reserveParkingSpaceForCustomer(availableSpace.id, reservation);
+
+  return {
+    ...result,
+    spaceId: availableSpace.id,
+  };
 }
 
 /**

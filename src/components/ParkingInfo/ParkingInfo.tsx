@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import ParkingReservation, { ReservationData } from '../ParkingReservation';
 import ParkingApproved from '../ParkingApproved/ParkingApproved';
+import { reserveFirstAvailableParkingSpaceForCustomer } from '../../services/parkingSpaces.service';
 import './ParkingInfo.css';
 
 interface ParkingSpace {
@@ -35,6 +36,8 @@ export default function ParkingInfo({
   const [isCelebrating, setIsCelebrating] = useState(false);
   const [showReservation, setShowReservation] = useState(false);
   const [showApproved, setShowApproved] = useState(false);
+  const [showNoAvailability, setShowNoAvailability] = useState(false);
+  const [reservedSpaceId, setReservedSpaceId] = useState<string | null>(null);
   const [reservationData, setReservationData] = useState<ReservationData | null>(null);
 
   useEffect(() => {
@@ -43,6 +46,8 @@ export default function ParkingInfo({
       setIsCelebrating(false);
       setShowReservation(false);
       setShowApproved(false);
+      setShowNoAvailability(false);
+      setReservedSpaceId(null);
       setReservationData(null);
       return;
     }
@@ -50,6 +55,8 @@ export default function ParkingInfo({
     setHasRecommendedLocal(false);
     setIsCelebrating(false);
     setShowReservation(false);
+    setShowNoAvailability(false);
+    setReservedSpaceId(null);
   }, [isOpen, parkingSpace?.id]);
 
   if (!isOpen || !parkingSpace) return null;
@@ -67,15 +74,35 @@ export default function ParkingInfo({
     onRecommend();
   };
 
-  const handleReservationConfirm = (data: ReservationData) => {
+  const handleReservationConfirm = async (data: ReservationData) => {
     setReservationData(data);
-    console.log("הזמנת חנייה אושרה:", {
-      parkingLotId: parkingSpace.id,
-      parkingLotAddress: parkingSpace.address,
-      ...data,
-    });
-    setShowReservation(false);
-    setShowApproved(true);
+
+    try {
+      const reservationResult = await reserveFirstAvailableParkingSpaceForCustomer(parkingSpace.id, data);
+
+      console.log("הזמנת חנייה אושרה ונשמרה ב-Firestore:", {
+        parkingLotId: parkingSpace.id,
+        parkingLotAddress: parkingSpace.address,
+        reservedSpaceId: reservationResult.spaceId,
+        ...data,
+      });
+
+      setReservedSpaceId(reservationResult.spaceId);
+      setShowReservation(false);
+      setShowApproved(true);
+    } catch (error) {
+      console.error("שגיאה בשמירת ההזמנה ב-Firestore:", error);
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.includes("No available parking spaces found")) {
+        setShowReservation(false);
+        setShowNoAvailability(true);
+        return;
+      }
+
+      alert("לא הצלחנו לשמור את ההזמנה כרגע. נסה שוב.");
+    }
   };
 
   return (
@@ -150,6 +177,14 @@ export default function ParkingInfo({
         <ParkingApproved
           isOpen={showApproved}
           onClose={() => setShowApproved(false)}
+          parkingSpaceId={reservedSpaceId}
+          reservation={reservationData}
+        />
+
+        <ParkingApproved
+          isOpen={showNoAvailability}
+          onClose={() => setShowNoAvailability(false)}
+          variant="error"
         />
       </div>
     </div>
