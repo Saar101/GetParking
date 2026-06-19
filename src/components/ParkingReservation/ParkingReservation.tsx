@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./ParkingReservation.css";
 
 interface ParkingReservationProps {
@@ -37,6 +37,8 @@ export default function ParkingReservation({
   onConfirm,
   parkingLotName = "החניון",
 }: ParkingReservationProps) {
+  const dateInputRef = useRef<HTMLInputElement | null>(null);
+  const timeInputRef = useRef<HTMLInputElement | null>(null);
   const [date, setDate] = useState(getCurrentDate());
   const [startTime, setStartTime] = useState(getCurrentTime());
   const [durationHours, setDurationHours] = useState(2);
@@ -53,6 +55,44 @@ export default function ParkingReservation({
       handleOpen();
     }
   }, [isOpen]);
+
+  const openDatePicker = () => {
+    const input = dateInputRef.current;
+
+    if (!input) {
+      return;
+    }
+
+    const pickerInput = input as HTMLInputElement & {
+      showPicker?: () => void;
+    };
+
+    if (typeof pickerInput.showPicker === "function") {
+      pickerInput.showPicker();
+      return;
+    }
+
+    input.focus();
+  };
+
+  const openTimePicker = () => {
+    const input = timeInputRef.current;
+
+    if (!input) {
+      return;
+    }
+
+    const pickerInput = input as HTMLInputElement & {
+      showPicker?: () => void;
+    };
+
+    if (typeof pickerInput.showPicker === "function") {
+      pickerInput.showPicker();
+      return;
+    }
+
+    input.focus();
+  };
 
   const handleConfirm = () => {
     if (!date || !startTime) {
@@ -102,9 +142,12 @@ export default function ParkingReservation({
             <input
               id="pr-date"
               type="date"
+              ref={dateInputRef}
               value={date}
               onChange={(e) => setDate(e.target.value)}
+              onClick={openDatePicker}
               className="pr-input pr-input--date"
+              style={{ cursor: "pointer", pointerEvents: "auto" }}
             />
           </div>
 
@@ -116,9 +159,12 @@ export default function ParkingReservation({
             <input
               id="pr-time"
               type="time"
+              ref={timeInputRef}
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
+              onClick={openTimePicker}
               className="pr-input pr-input--time"
+              style={{ cursor: "pointer", pointerEvents: "auto" }}
             />
           </div>
 
