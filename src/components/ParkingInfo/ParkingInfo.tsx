@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import ParkingReservation, { ReservationData } from '../ParkingReservation';
+import ParkingApproved from '../ParkingApproved/ParkingApproved';
 import './ParkingInfo.css';
 
 interface ParkingSpace {
@@ -31,16 +33,23 @@ export default function ParkingInfo({
 }: ParkingInfoProps) {
   const [hasRecommendedLocal, setHasRecommendedLocal] = useState(false);
   const [isCelebrating, setIsCelebrating] = useState(false);
+  const [showReservation, setShowReservation] = useState(false);
+  const [showApproved, setShowApproved] = useState(false);
+  const [reservationData, setReservationData] = useState<ReservationData | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
       setHasRecommendedLocal(false);
       setIsCelebrating(false);
+      setShowReservation(false);
+      setShowApproved(false);
+      setReservationData(null);
       return;
     }
 
     setHasRecommendedLocal(false);
     setIsCelebrating(false);
+    setShowReservation(false);
   }, [isOpen, parkingSpace?.id]);
 
   if (!isOpen || !parkingSpace) return null;
@@ -56,6 +65,17 @@ export default function ParkingInfo({
     setIsCelebrating(true);
     window.setTimeout(() => setIsCelebrating(false), 750);
     onRecommend();
+  };
+
+  const handleReservationConfirm = (data: ReservationData) => {
+    setReservationData(data);
+    console.log("הזמנת חנייה אושרה:", {
+      parkingLotId: parkingSpace.id,
+      parkingLotAddress: parkingSpace.address,
+      ...data,
+    });
+    setShowReservation(false);
+    setShowApproved(true);
   };
 
   return (
@@ -106,7 +126,7 @@ export default function ParkingInfo({
         <div className="parking-info-actions">
           <button 
             className="action-button book-button"
-            onClick={onBook}
+            onClick={() => setShowReservation(true)}
             disabled={!parkingSpace.available}
           >
             🔖 הזמנת חנייה
@@ -119,6 +139,18 @@ export default function ParkingInfo({
             {isRecommendationLocked ? '✅ הומלץ' : '👍 המלצה'}
           </button>
         </div>
+
+        <ParkingReservation
+          isOpen={showReservation}
+          onClose={() => setShowReservation(false)}
+          onConfirm={handleReservationConfirm}
+          parkingLotName={parkingSpace.address}
+        />
+
+        <ParkingApproved
+          isOpen={showApproved}
+          onClose={() => setShowApproved(false)}
+        />
       </div>
     </div>
   );

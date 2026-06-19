@@ -1,0 +1,188 @@
+import { useState, useEffect } from "react";
+import "./ParkingReservation.css";
+
+interface ParkingReservationProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm?: (data: ReservationData) => void;
+  parkingLotName?: string;
+}
+
+export interface ReservationData {
+  date: string;
+  startTime: string;
+  durationHours: number;
+}
+
+// Get current date in YYYY-MM-DD format
+function getCurrentDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// Get current time in HH:MM format
+function getCurrentTime(): string {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+export default function ParkingReservation({
+  isOpen,
+  onClose,
+  onConfirm,
+  parkingLotName = "החניון",
+}: ParkingReservationProps) {
+  const [date, setDate] = useState(getCurrentDate());
+  const [startTime, setStartTime] = useState(getCurrentTime());
+  const [durationHours, setDurationHours] = useState(2);
+
+  // Reset to current date/time when popup opens
+  const handleOpen = () => {
+    setDate(getCurrentDate());
+    setStartTime(getCurrentTime());
+    setDurationHours(2);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      handleOpen();
+    }
+  }, [isOpen]);
+
+  const handleConfirm = () => {
+    if (!date || !startTime) {
+      alert("אנא מלא את כל השדות");
+      return;
+    }
+
+    const reservationData: ReservationData = {
+      date,
+      startTime,
+      durationHours,
+    };
+
+    if (onConfirm) {
+      onConfirm(reservationData);
+    }
+
+    onClose();
+  };
+
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="pr-overlay" onClick={onClose} />
+      <div className="pr-popup">
+        <div className="pr-header">
+          <h3 className="pr-title">📅 הזמן חנייה</h3>
+          <p className="pr-subtitle">ל־{parkingLotName}</p>
+          <button
+            className="pr-close-button"
+            onClick={onClose}
+            aria-label="סגירת הפאנל"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="pr-body">
+          {/* Date Field */}
+          <div className="pr-field">
+            <label htmlFor="pr-date" className="pr-label">
+              📆 בחר תאריך
+            </label>
+            <input
+              id="pr-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="pr-input pr-input--date"
+            />
+          </div>
+
+          {/* Time Field */}
+          <div className="pr-field">
+            <label htmlFor="pr-time" className="pr-label">
+              🕐 שעת הגעה
+            </label>
+            <input
+              id="pr-time"
+              type="time"
+              value={startTime}
+              onChange={(e) => setStartTime(e.target.value)}
+              className="pr-input pr-input--time"
+            />
+          </div>
+
+          {/* Duration Field */}
+          <div className="pr-field">
+            <label htmlFor="pr-duration" className="pr-label">
+              ⏱️ זמן השהות בחנייה (שעות)
+            </label>
+            <div className="pr-duration-container">
+              <select
+                id="pr-duration"
+                value={durationHours}
+                onChange={(e) => setDurationHours(Number(e.target.value))}
+                className="pr-select"
+              >
+                <option value={1}>1 שעה</option>
+                <option value={2}>2 שעות</option>
+                <option value={3}>3 שעות</option>
+                <option value={4}>4 שעות</option>
+                <option value={6}>6 שעות</option>
+                <option value={8}>8 שעות</option>
+                <option value={12}>12 שעות</option>
+                <option value={24}>24 שעות</option>
+              </select>
+              <span className="pr-duration-display">{durationHours} ש׳</span>
+            </div>
+          </div>
+
+          {/* Summary */}
+          <div className="pr-summary">
+            <div className="pr-summary-item">
+              <span className="pr-summary-label">תאריך:</span>
+              <span className="pr-summary-value">
+                {date ? new Date(date).toLocaleDateString("he-IL") : "לא נבחר"}
+              </span>
+            </div>
+            <div className="pr-summary-item">
+              <span className="pr-summary-label">זמן:</span>
+              <span className="pr-summary-value">{startTime}</span>
+            </div>
+            <div className="pr-summary-item">
+              <span className="pr-summary-label">משך:</span>
+              <span className="pr-summary-value">{durationHours} שעות</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="pr-footer">
+          <button
+            className="pr-button pr-button--secondary"
+            onClick={onClose}
+            type="button"
+          >
+            ביטול
+          </button>
+          <button
+            className="pr-button pr-button--primary"
+            onClick={handleConfirm}
+            type="button"
+          >
+            ✓ אישור הזמנה
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
