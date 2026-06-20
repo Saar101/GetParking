@@ -35,6 +35,20 @@ export type ParkingSpaceDoc = {
   createdAt?: any;
 };
 
+export type UserBookingRow = {
+  spaceId: string;
+  lotId: string;
+  lotName: string;
+  lotAddress: string;
+  date: string | null;
+  startTime: string | null;
+  durationHours: number | null;
+  reservedFrom: string | null;
+  reservedUntil: string | null;
+  status: "future" | "active" | "past";
+  source: "reservation" | "history";
+};
+
 type UserDoc = {
   userId: number;
   name: string;
@@ -415,4 +429,106 @@ export async function clearSpace(spaceId: string) {
     customerId: null,
     dateTime: new Date().toISOString(),
   });
+}
+
+function resolveBookingStatus(reservedFrom: string | null, reservedUntil: string | null): "future" | "active" | "past" {
+  if (!reservedFrom || !reservedUntil) {
+    return "past";
+  }
+
+  const now = Date.now();
+  const start = new Date(reservedFrom).getTime();
+  const end = new Date(reservedUntil).getTime();
+
+  if (Number.isNaN(start) || Number.isNaN(end)) {
+    return "past";
+  }
+
+  if (start > now) {
+    return "future";
+  }
+
+  if (start <= now && end >= now) {
+    return "active";
+  }
+
+  return "past";
+}
+
+export async function listUserBookings(userDocId?: string): Promise<UserBookingRow[]> {
+  const resolvedUserDocId = userDocId ?? (await getCurrentBookingUserDocId());
+  const userSnap = await getDoc(doc(db, usersCol, resolvedUserDocId));
+  const userData = userSnap.exists() ? (userSnap.data() as { bookingHistory?: string[] }) : null;
+  const bookingHistory = Array.isArray(userData?.bookingHistory) ? userData!.bookingHistory : [];
+
+  const [spacesSnap, lotsSnap] = await Promise.all([
+    getDocs(collection(db, spacesCol)),
+    getDocs(collection(db, "parkingLots")),
+  ]);
+
+  const lotById = new Map(
+    lotsSnap.docs.map((lotDoc) => {
+      const data = lotDoc.data() as { name?: string; address?: string };
+      return [
+        lotDoc.id,
+        {
+          name: data.name ?? lotDoc.id,
+          address: data.address ?? "",
+        },
+      ];
+    })
+  );
+
+  const rowsBySpaceId = new Map<string, UserBookingRow>();
+
+  for (const spaceDoc of spacesSnap.docs) {
+    const spaceId = spaceDoc.id;
+    const space = spaceDoc.data() as ParkingSpaceDoc;
+    const reservation = space.reservation;
+    const lotMeta = lotById.get(space.parkingLotId);
+    const inHistory = bookingHistory.includes(spaceId);
+    const belongsToUserReservation = reservation?.reservedByUserDocId === resolvedUserDocId;
+
+    if (!inHistory && !belongsToUserReservation) {
+      continue;
+    }
+
+    const row: UserBookingRow = {
+      spaceId,
+      lotId: space.parkingLotId,
+      lotName: lotMeta?.name ?? space.parkingLotId,
+      lotAddress: lotMeta?.address ?? "",
+      date: reservation?.date ?? null,
+      startTime: reservation?.startTime ?? null,
+      durationHours: reservation?.durationHours ?? null,
+      reservedFrom: reservation?.reservedFrom ?? null,
+      reservedUntil: reservation?.reservedUntil ?? null,
+      status: resolveBookingStatus(reservation?.reservedFrom ?? null, reservation?.reservedUntil ?? null),
+      source: belongsToUserReservation ? "reservation" : "history",
+    };
+
+    rowsBySpaceId.set(spaceId, row);
+  }
+
+  const rows = Array.from(rowsBySpaceId.values());
+  const statusRank = { active: 0, future: 1, past: 2 } as const;
+
+  rows.sort((left, right) => {
+    const rankDiff = statusRank[left.status] - statusRank[right.status];
+
+    if (rankDiff !== 0) {
+      return rankDiff;
+    }
+
+    const leftTime = new Date(left.reservedFrom ?? left.reservedUntil ?? 0).getTime();
+    const rightTime = new Date(right.reservedFrom ?? right.reservedUntil ?? 0).getTime();
+
+    if (left.status === "past") {
+      return rightTime - leftTime;
+    }
+
+    return leftTime - rightTime;
+  });
+
+  return rows;
 }

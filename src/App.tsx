@@ -8,6 +8,7 @@ import { seedGetParkingData } from "./services/seed";
 import { resetAllParkingSpacesToAvailable } from "./services/parkingSpaces.service";
 import { syncAuthenticatedUserRecord } from "./services/users.service";
 import GoogleMapTest from "./components/GoogleMapTest.tsx/GoogleMapTest";
+import BookingsTable from "./components/BookingsTable/BookingsTable";
 import ParkingInfo from "./components/ParkingInfo/ParkingInfo";
 import SidBar from "./components/SidBar/SidBar";
 import logo from "./assets/ChatGPT Image Jan 26, 2026, 08_22_00 PM.png";
@@ -18,6 +19,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [showParkingInfo, setShowParkingInfo] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [showBookings, setShowBookings] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
@@ -131,6 +133,9 @@ export default function App() {
         <button onClick={() => setShowParkingInfo(true)} style={{ padding: "8px 16px", cursor: "pointer" }}>
           Show Parking Info
         </button>
+        <button onClick={() => setShowBookings(true)} style={{ padding: "8px 16px", cursor: "pointer" }}>
+          ההזמנות שלי
+        </button>
       </div>
 
       <p style={{ marginTop: 14, fontFamily: "monospace", fontSize: "14px", color: "#666" }}>
@@ -149,6 +154,7 @@ export default function App() {
         onBook={() => {}}
         onRecommend={() => console.log("Recommend clicked")}
       />
+      <BookingsTable isOpen={showBookings} onClose={() => setShowBookings(false)} />
       </div>
     </>
   );
