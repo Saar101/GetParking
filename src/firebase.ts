@@ -3,12 +3,13 @@ import { getAuth } from "firebase/auth";
 import { initializeFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: "AIzaSyDTPAW0HtLGrznGcmCn0eTSNnJJG8ZA8Ak",
+  authDomain: "getparking-81f41.firebaseapp.com",
+  projectId: "getparking-81f41",
+  storageBucket: "getparking-81f41.firebasestorage.app",
+  messagingSenderId: "179171539484",
+  appId: "1:179171539484:web:e55e9777d90a7b726b3dd9",
+  measurementId: "G-MZ6YV657YY",
 };
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);

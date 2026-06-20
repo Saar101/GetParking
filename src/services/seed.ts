@@ -70,6 +70,7 @@ export async function seedGetParkingData() {
       doc(db, "users", user.id),
       {
         userId: Number(user.id),
+        customerId: Number(user.id),
         name: user.name,
         role: user.role,
         bookingHistory: [],

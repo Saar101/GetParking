@@ -1,19 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import "./App.css";
 
+import { auth } from "./firebase";
+import AuthScreen from "./components/AuthScreen/AuthScreen";
 import { seedGetParkingData } from "./services/seed";
 import { resetAllParkingSpacesToAvailable } from "./services/parkingSpaces.service";
+import { syncAuthenticatedUserRecord } from "./services/users.service";
 import GoogleMapTest from "./components/GoogleMapTest.tsx/GoogleMapTest";
-import ParkingApproved from "./components/ParkingApproved/ParkingApproved";
 import ParkingInfo from "./components/ParkingInfo/ParkingInfo";
 import SidBar from "./components/SidBar/SidBar";
 import logo from "./assets/ChatGPT Image Jan 26, 2026, 08_22_00 PM.png";
 
 export default function App() {
   const [status, setStatus] = useState("Ready");
-  const [showApproved, setShowApproved] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const [showParkingInfo, setShowParkingInfo] = useState(false);
   const [showMap, setShowMap] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+      setAuthReady(true);
+
+      if (nextUser) {
+        void syncAuthenticatedUserRecord();
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   const mockParkingSpace = {
     id: "L01-01",
@@ -48,10 +65,29 @@ export default function App() {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
+
+  if (!authReady) {
+    return <AuthScreen subtitle="טוען את מסך הכניסה..." />;
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
+
   return (
     <>
-      <SidBar />
-      <div style={{ position: 'fixed', top: 20, left: 20, zIndex: 1100 }}>
+      <SidBar onLogout={handleLogout} userName={user.displayName ?? user.email ?? "משתמש"} />
+      <div style={{ position: 'fixed', top: 20, left: 20, zIndex: 1100, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <button
+          onClick={handleLogout}
+          style={{ padding: '8px 12px', borderRadius: 8, background: '#7a1f1f', color: 'white', border: 'none', cursor: 'pointer' }}
+          title="התנתקות"
+        >
+          התנתקות
+        </button>
         <button
           onClick={runSeed}
           style={{ padding: '8px 12px', borderRadius: 8, background: '#08507a', color: 'white', border: 'none', cursor: 'pointer' }}
@@ -106,12 +142,11 @@ export default function App() {
         <GoogleMapTest isOpen={showMap} onClose={() => setShowMap(false)} />
       </div>
 
-      <ParkingApproved isOpen={showApproved} onClose={() => setShowApproved(false)} />
       <ParkingInfo 
         isOpen={showParkingInfo} 
         onClose={() => setShowParkingInfo(false)}
         parkingSpace={mockParkingSpace}
-        onBook={() => setShowApproved(true)}
+        onBook={() => {}}
         onRecommend={() => console.log("Recommend clicked")}
       />
       </div>

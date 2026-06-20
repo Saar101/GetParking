@@ -4,6 +4,7 @@ import './ParkingApproved.css';
 interface ParkingApprovedProps {
   isOpen: boolean;
   onClose: () => void;
+  onRelease?: () => void;
   variant?: 'success' | 'error';
   title?: string;
   message?: string;
@@ -20,6 +21,7 @@ interface ParkingApprovedProps {
 export default function ParkingApproved({
   isOpen,
   onClose,
+  onRelease,
   variant = 'success',
   title,
   message,
@@ -63,6 +65,11 @@ export default function ParkingApproved({
           <p>
             {formattedReservationDate} • {reservation.startTime} • {reservation.durationHours} שעות
           </p>
+        )}
+        {!isErrorVariant && onRelease && (
+          <button className="parking-approved-release-button" onClick={onRelease} type="button">
+            שחרר חנייה
+          </button>
         )}
       </div>
     </div>

@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import './SidBar.css';
 
-export default function SidBar() {
+type SidBarProps = {
+  onLogout?: () => void;
+  userName?: string;
+};
+
+export default function SidBar({ onLogout, userName }: SidBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState('find');
 
@@ -19,6 +24,10 @@ export default function SidBar() {
 
   const handleNavClick = (pageId: string) => {
     setCurrentPage(pageId);
+    if (pageId === 'logout') {
+      onLogout?.();
+      return;
+    }
     console.log(`Navigate to: ${pageId}`);
   };
 
@@ -48,7 +57,7 @@ export default function SidBar() {
 
       {isExpanded && (
         <div className="sidebar-content">
-          {/* Additional content */}
+          {userName ? <p className="sidebar-user">{userName}</p> : null}
         </div>
       )}
     </div>

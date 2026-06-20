@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
-import ParkingReservation, { ReservationData } from '../ParkingReservation';
+import ParkingReservation, { type ReservationData } from '../ParkingReservation';
 import ParkingApproved from '../ParkingApproved/ParkingApproved';
-import { reserveFirstAvailableParkingSpaceForCustomer } from '../../services/parkingSpaces.service';
+import {
+  releaseParkingSpaceReservation,
+  reserveFirstAvailableParkingSpaceForCustomer,
+} from '../../services/parkingSpaces.service';
+import { getCurrentBookingUserDocId } from '../../services/users.service';
 import './ParkingInfo.css';
 
 interface ParkingSpace {
@@ -38,6 +42,7 @@ export default function ParkingInfo({
   const [showApproved, setShowApproved] = useState(false);
   const [showNoAvailability, setShowNoAvailability] = useState(false);
   const [reservedSpaceId, setReservedSpaceId] = useState<string | null>(null);
+  const [reservedByUserDocId, setReservedByUserDocId] = useState<string | null>(null);
   const [reservationData, setReservationData] = useState<ReservationData | null>(null);
 
   useEffect(() => {
@@ -48,6 +53,7 @@ export default function ParkingInfo({
       setShowApproved(false);
       setShowNoAvailability(false);
       setReservedSpaceId(null);
+      setReservedByUserDocId(null);
       setReservationData(null);
       return;
     }
@@ -57,6 +63,7 @@ export default function ParkingInfo({
     setShowReservation(false);
     setShowNoAvailability(false);
     setReservedSpaceId(null);
+    setReservedByUserDocId(null);
   }, [isOpen, parkingSpace?.id]);
 
   if (!isOpen || !parkingSpace) return null;
@@ -76,9 +83,13 @@ export default function ParkingInfo({
 
   const handleReservationConfirm = async (data: ReservationData) => {
     setReservationData(data);
+    const currentUserDocId = await getCurrentBookingUserDocId();
 
     try {
-      const reservationResult = await reserveFirstAvailableParkingSpaceForCustomer(parkingSpace.id, data);
+      const reservationResult = await reserveFirstAvailableParkingSpaceForCustomer(parkingSpace.id, {
+        ...data,
+        userDocId: currentUserDocId,
+      });
 
       console.log("הזמנת חנייה אושרה ונשמרה ב-Firestore:", {
         parkingLotId: parkingSpace.id,
@@ -88,13 +99,14 @@ export default function ParkingInfo({
       });
 
       setReservedSpaceId(reservationResult.spaceId);
+      setReservedByUserDocId(currentUserDocId);
       setShowReservation(false);
       setShowApproved(true);
+      onBook();
     } catch (error) {
       console.error("שגיאה בשמירת ההזמנה ב-Firestore:", error);
 
       const errorMessage = error instanceof Error ? error.message : String(error);
-
       if (errorMessage.includes("No available parking spaces found")) {
         setShowReservation(false);
         setShowNoAvailability(true);
@@ -102,6 +114,23 @@ export default function ParkingInfo({
       }
 
       alert("לא הצלחנו לשמור את ההזמנה כרגע. נסה שוב.");
+    }
+  };
+
+  const handleReleaseReservation = async () => {
+    if (!reservedSpaceId) {
+      return;
+    }
+
+    try {
+      await releaseParkingSpaceReservation(reservedSpaceId, reservedByUserDocId ?? undefined);
+      setShowApproved(false);
+      setReservedSpaceId(null);
+      setReservedByUserDocId(null);
+      setReservationData(null);
+    } catch (error) {
+      console.error('שגיאה בשחרור החנייה:', error);
+      alert('לא הצלחנו לשחרר את החנייה כרגע. נסה שוב.');
     }
   };
 
@@ -153,7 +182,9 @@ export default function ParkingInfo({
         <div className="parking-info-actions">
           <button 
             className="action-button book-button"
-            onClick={() => setShowReservation(true)}
+            onClick={() => {
+              setShowReservation(true);
+            }}
             disabled={!parkingSpace.available}
           >
             🔖 הזמנת חנייה
@@ -177,6 +208,7 @@ export default function ParkingInfo({
         <ParkingApproved
           isOpen={showApproved}
           onClose={() => setShowApproved(false)}
+          onRelease={handleReleaseReservation}
           parkingSpaceId={reservedSpaceId}
           reservation={reservationData}
         />

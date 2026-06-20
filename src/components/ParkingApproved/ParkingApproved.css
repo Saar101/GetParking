@@ -69,6 +69,29 @@
   font-weight: 500;
 }
 
+.parking-approved-release-button {
+  margin-top: 22px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(249, 115, 22, 0.28);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.parking-approved-release-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(249, 115, 22, 0.34);
+}
+
+.parking-approved-release-button:active {
+  transform: translateY(0);
+}
+
 .parking-approved-popup--error h2 {
   color: #dc2626;
 }

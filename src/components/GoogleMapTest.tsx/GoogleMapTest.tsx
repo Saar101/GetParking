@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { addParkingLotRecommendation, listParkingLots, type ParkingLotDoc } from "../../services/parkingLots.service";
 import ChatConsultation from "../ChatConsultation/ChatConsultation";
-import ParkingApproved from "../ParkingApproved/ParkingApproved";
 import ParkingInfo from "../ParkingInfo/ParkingInfo";
 import "./GoogleMapTest.css";
 
@@ -322,7 +321,6 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
   const [selectedParkingLot, setSelectedParkingLot] = useState<ParkingInfoCard | null>(null);
   const [recommendedLotIds, setRecommendedLotIds] = useState<string[]>([]);
   const [isRecommending, setIsRecommending] = useState(false);
-  const [showApproved, setShowApproved] = useState(false);
   const circleRef = useRef<any>(null);
 
   useEffect(() => {
@@ -683,18 +681,11 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
         isOpen={selectedParkingLot !== null}
         onClose={() => setSelectedParkingLot(null)}
         parkingSpace={selectedParkingLot as any}
-        onBook={() => {
-          setSelectedParkingLot(null);
-          setShowApproved(true);
-        }}
+        onBook={() => {}}
         onRecommend={handleRecommendParkingLot}
         recommendationDisabled={
           !selectedParkingLot ? false : recommendedLotIds.includes(selectedParkingLot.id) || isRecommending
         }
-      />
-      <ParkingApproved
-        isOpen={showApproved}
-        onClose={() => setShowApproved(false)}
       />
             </div>
           </div>

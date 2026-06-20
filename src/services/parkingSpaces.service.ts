@@ -9,6 +9,7 @@ import {
   runTransaction,
   arrayUnion,
 } from "firebase/firestore";
+import { getCurrentBookingUserDocId } from "./users.service";
 
 export type SpaceStatus = "available" | "occupied" | "reserved";
 export type UserRole = "customer" | "owner" | "admin";
@@ -20,6 +21,7 @@ export type ParkingReservationDoc = {
   reservedFrom: string;
   reservedUntil: string;
   customerId?: number | null;
+  reservedByUserDocId?: string | null;
   createdAt?: any;
 };
 
@@ -65,22 +67,26 @@ export async function updateParkingSpace(
   await updateDoc(doc(db, spacesCol, spaceId), patch as any);
 }
 
-export async function getFirstAvailableParkingSpaceForLot(lotId: string) {
+export async function getAvailableParkingSpacesForLot(lotId: string) {
   const snap = await getDocs(collection(db, spacesCol));
-  const availableSpace = snap.docs
+  return snap.docs
     .map((spaceDoc) => ({
       id: spaceDoc.id,
       ...(spaceDoc.data() as ParkingSpaceDoc),
     }))
     .filter((space) => space.parkingLotId === lotId && space.status === "available")
-    .sort((left, right) => left.id.localeCompare(right.id))[0];
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
 
-  if (!availableSpace) {
+export async function getFirstAvailableParkingSpaceForLot(lotId: string) {
+  const availableSpaces = await getAvailableParkingSpacesForLot(lotId);
+
+  if (availableSpaces.length === 0) {
     return null;
   }
 
   return {
-    ...availableSpace,
+    ...availableSpaces[0],
   };
 }
 
@@ -111,6 +117,20 @@ function buildReservationWindow(date: string, startTime: string, durationHours: 
   };
 }
 
+function hasTimeOverlap(
+  leftStart: string,
+  leftEnd: string,
+  rightStart: string,
+  rightEnd: string
+) {
+  const leftStartTime = new Date(leftStart).getTime();
+  const leftEndTime = new Date(leftEnd).getTime();
+  const rightStartTime = new Date(rightStart).getTime();
+  const rightEndTime = new Date(rightEnd).getTime();
+
+  return leftStartTime < rightEndTime && rightStartTime < leftEndTime;
+}
+
 export async function reserveParkingSpaceForCustomer(
   spaceId: string,
   reservation: {
@@ -118,9 +138,11 @@ export async function reserveParkingSpaceForCustomer(
     startTime: string;
     durationHours: number;
     customerId?: number | null;
+    userDocId?: string | null;
   }
 ) {
   const spaceRef = doc(db, spacesCol, spaceId);
+  const bookingUserDocId = reservation.userDocId ?? (await getCurrentBookingUserDocId());
 
   return await runTransaction(db, async (tx) => {
     const spaceSnap = await tx.get(spaceRef);
@@ -141,19 +163,71 @@ export async function reserveParkingSpaceForCustomer(
       reservation.durationHours
     );
 
+    if (
+      space.reservation &&
+      hasTimeOverlap(
+        space.reservation.reservedFrom,
+        space.reservation.reservedUntil,
+        reservationWindow.reservedFrom,
+        reservationWindow.reservedUntil
+      )
+    ) {
+      throw new Error(`Space ${spaceId} has an overlapping reservation`);
+    }
+
+    const userRef = doc(db, usersCol, bookingUserDocId);
+    const userSnap = await tx.get(userRef);
+    const user = userSnap.exists() ? (userSnap.data() as any) : null;
+    const parsedBookingUserDocId = Number.parseInt(bookingUserDocId, 10);
+    const numericCustomerId =
+      reservation.customerId ??
+      user?.customerId ??
+      user?.userId ??
+      (Number.isFinite(parsedBookingUserDocId) ? parsedBookingUserDocId : null);
+
     tx.update(spaceRef, {
       status: "reserved",
-      customerId: reservation.customerId ?? null,
+      customerId: numericCustomerId,
       dateTime: new Date().toISOString(),
       reservation: {
         date: reservation.date,
         startTime: reservation.startTime,
         durationHours: reservation.durationHours,
         ...reservationWindow,
-        customerId: reservation.customerId ?? null,
+        customerId: numericCustomerId,
+        reservedByUserDocId: bookingUserDocId,
         createdAt: new Date().toISOString(),
       },
     } as any);
+
+    const parkingLotRef = doc(db, "parkingLots", space.parkingLotId);
+
+    tx.update(parkingLotRef, {
+      customerId: numericCustomerId,
+      parkingSpaceId: spaceId,
+      dateTime: new Date().toISOString(),
+    } as any);
+
+    if (userSnap.exists()) {
+      tx.update(userRef, {
+        customerId: numericCustomerId,
+        parkingLotId: space.parkingLotId,
+        parkingSpaceId: spaceId,
+        bookingHistory: arrayUnion(spaceId),
+      } as any);
+    } else {
+      tx.set(
+        userRef,
+        {
+          userId: numericCustomerId,
+          customerId: numericCustomerId,
+          parkingLotId: space.parkingLotId,
+          parkingSpaceId: spaceId,
+          bookingHistory: [spaceId],
+        },
+        { merge: true }
+      );
+    }
 
     return { ok: true, spaceId, reservation: { ...reservation, ...reservationWindow } };
   });
@@ -166,20 +240,79 @@ export async function reserveFirstAvailableParkingSpaceForCustomer(
     startTime: string;
     durationHours: number;
     customerId?: number | null;
+    userDocId?: string | null;
   }
 ) {
-  const availableSpace = await getFirstAvailableParkingSpaceForLot(lotId);
+  const availableSpaces = await getAvailableParkingSpacesForLot(lotId);
 
-  if (!availableSpace) {
+  if (availableSpaces.length === 0) {
     throw new Error(`No available parking spaces found for lot ${lotId}`);
   }
 
-  const result = await reserveParkingSpaceForCustomer(availableSpace.id, reservation);
+  for (const availableSpace of availableSpaces) {
+    try {
+      const result = await reserveParkingSpaceForCustomer(availableSpace.id, reservation);
 
-  return {
-    ...result,
-    spaceId: availableSpace.id,
-  };
+      return {
+        ...result,
+        spaceId: availableSpace.id,
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (message.includes("overlapping reservation")) {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw new Error(`No available parking spaces found for lot ${lotId}`);
+}
+
+export async function releaseParkingSpaceReservation(
+  spaceId: string,
+  userDocId?: string | null
+) {
+  const spaceRef = doc(db, spacesCol, spaceId);
+  const bookingUserDocId = userDocId ?? (await getCurrentBookingUserDocId());
+  const userRef = doc(db, usersCol, bookingUserDocId);
+
+  return await runTransaction(db, async (tx) => {
+    const spaceSnap = await tx.get(spaceRef);
+
+    if (!spaceSnap.exists()) {
+      throw new Error(`Space ${spaceId} not found`);
+    }
+
+    const space = spaceSnap.data() as ParkingSpaceDoc;
+
+    tx.update(spaceRef, {
+      status: "available",
+      customerId: null,
+      reservation: null,
+      dateTime: new Date().toISOString(),
+    } as any);
+
+    tx.update(doc(db, "parkingLots", space.parkingLotId), {
+      customerId: null,
+      parkingSpaceId: null,
+      dateTime: new Date().toISOString(),
+    } as any);
+
+    tx.set(
+      userRef,
+      {
+        customerId: null,
+        parkingLotId: null,
+        parkingSpaceId: null,
+      },
+      { merge: true }
+    );
+
+    return { ok: true, releasedSpaceId: spaceId, parkingLotId: space.parkingLotId };
+  });
 }
 
 /**
