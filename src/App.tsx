@@ -147,13 +147,6 @@ export default function App() {
             />
             <div style={{ position: 'fixed', top: 20, left: 20, zIndex: 1100, display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button
-                onClick={handleLogout}
-                style={{ padding: '8px 12px', borderRadius: 8, background: '#7a1f1f', color: 'white', border: 'none', cursor: 'pointer' }}
-                title="התנתקות"
-              >
-                התנתקות
-              </button>
-              <button
                 onClick={runSeed}
                 style={{ padding: '8px 12px', borderRadius: 8, background: '#08507a', color: 'white', border: 'none', cursor: 'pointer' }}
                 title="Seed Firestore with test data"
@@ -189,12 +182,6 @@ export default function App() {
               >
                 <span className="gmt-button-emoji">🗺️</span>
                 <span className="gmt-button-text">חיפוש חניון</span>
-              </button>
-            </div>
-
-            <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <button onClick={() => setShowParkingInfo(true)} style={{ padding: "8px 16px", cursor: "pointer" }}>
-                Show Parking Info
               </button>
             </div>
 
