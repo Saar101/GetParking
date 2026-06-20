@@ -1,0 +1,80 @@
+.booking-bubbles {
+  position: fixed;
+  left: 22px;
+  bottom: 22px;
+  z-index: 1250;
+  display: grid;
+  gap: 10px;
+  width: min(320px, calc(100vw - 44px));
+}
+
+.booking-bubble {
+  border: none;
+  border-radius: 16px;
+  text-align: right;
+  padding: 12px 14px;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  box-shadow: 0 14px 28px rgba(7, 46, 72, 0.24);
+  backdrop-filter: blur(8px);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, filter 0.22s ease;
+  animation: booking-bubble-pop 380ms cubic-bezier(0.2, 0.85, 0.24, 1.08);
+}
+
+.booking-bubble:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 34px rgba(7, 46, 72, 0.3);
+  filter: brightness(1.03);
+}
+
+.booking-bubble:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.booking-bubble--active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9));
+  color: #f7fffb;
+}
+
+.booking-bubble--future {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9));
+  color: #f8fbff;
+}
+
+.booking-bubble__title {
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.booking-bubble__subtitle {
+  font-size: 0.82rem;
+  opacity: 0.92;
+  line-height: 1.35;
+}
+
+@keyframes booking-bubble-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 760px) {
+  .booking-bubbles {
+    left: 14px;
+    bottom: 14px;
+    width: min(280px, calc(100vw - 28px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .booking-bubble {
+    animation: none;
+    transition: none;
+  }
+}

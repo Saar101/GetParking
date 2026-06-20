@@ -9,6 +9,8 @@ import { resetAllParkingSpacesToAvailable } from "./services/parkingSpaces.servi
 import { syncAuthenticatedUserRecord } from "./services/users.service";
 import GoogleMapTest from "./components/GoogleMapTest.tsx/GoogleMapTest";
 import BookingsTable from "./components/BookingsTable/BookingsTable";
+import BookingBubbles from "./components/BookingBubbles/BookingBubbles";
+import UserSettings from "./components/UserSettings/UserSettings";
 import ParkingInfo from "./components/ParkingInfo/ParkingInfo";
 import SidBar from "./components/SidBar/SidBar";
 import logo from "./assets/ChatGPT Image Jan 26, 2026, 08_22_00 PM.png";
@@ -20,6 +22,7 @@ export default function App() {
   const [showParkingInfo, setShowParkingInfo] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showBookings, setShowBookings] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
@@ -84,6 +87,7 @@ export default function App() {
       <SidBar
         onLogout={handleLogout}
         onBookingsClick={() => setShowBookings(true)}
+        onSettingsClick={() => setShowSettings(true)}
         userName={user.displayName ?? user.email ?? "משתמש"}
       />
       <div style={{ position: 'fixed', top: 20, left: 20, zIndex: 1100, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -155,7 +159,9 @@ export default function App() {
         onBook={() => {}}
         onRecommend={() => console.log("Recommend clicked")}
       />
+      <BookingBubbles onOpenBookings={() => setShowBookings(true)} />
       <BookingsTable isOpen={showBookings} onClose={() => setShowBookings(false)} />
+      <UserSettings isOpen={showSettings} onClose={() => setShowSettings(false)} />
       </div>
     </>
   );
