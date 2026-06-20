@@ -16,6 +16,16 @@ import {
 
 export type UserRole = "customer" | "owner" | "admin";
 
+export type BookingHistorySnapshot = {
+  date: string;
+  startTime: string;
+  durationHours: number;
+  reservedFrom: string;
+  reservedUntil: string;
+  endReason: "cancelled" | "ended";
+  endedAt?: string;
+};
+
 export type UserBase = {
   userId: number;
   name: string;
@@ -27,6 +37,7 @@ export type UserBase = {
   defaultSearchRadiusKm?: number;
   defaultArrivalTime?: string;
   notificationsEnabled?: boolean;
+  bookingHistoryDetails?: Record<string, BookingHistorySnapshot>;
   favoriteParkingLotIds?: string[];
   createdAt?: any; // serverTimestamp (optional to keep it simple)
 };
@@ -116,6 +127,7 @@ export async function syncAuthenticatedUserRecord() {
         email,
         authUid: currentUser.uid,
         bookingHistory: [],
+        bookingHistoryDetails: {},
         favoriteParkingLotIds: [],
         parkingLotId: null,
         parkingSpaceId: null,

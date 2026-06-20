@@ -219,6 +219,11 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.bookings-table__row--hiding {
+  animation: bookings-row-hide 260ms ease-in forwards;
+  pointer-events: none;
+}
+
 .bookings-table tbody tr:hover {
   background: #eef7ff;
   transform: translateY(-1px);
@@ -259,6 +264,31 @@
   color: #475467;
 }
 
+@keyframes bookings-row-hide {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    filter: blur(0);
+  }
+
+  60% {
+    opacity: 0.45;
+    transform: translateX(-6px) scale(0.995);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-12px) scale(0.985);
+    filter: blur(1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bookings-table__row--hiding {
+    animation: none;
+  }
+}
+
 .booking-cancel-button {
   border: none;
   border-radius: 10px;
@@ -279,6 +309,44 @@
 .booking-cancel-button:disabled {
   opacity: 0.65;
   cursor: wait;
+}
+
+.booking-hide-button {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #9aa4b2;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.booking-history-action-cell {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.booking-hide-button:hover {
+  transform: scale(1.08);
+  background: rgba(154, 164, 178, 0.14);
+  color: #6b7280;
+}
+
+.booking-hide-button:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .booking-hide-button {
+    transition: none;
+  }
 }
 
 @media (max-width: 760px) {
