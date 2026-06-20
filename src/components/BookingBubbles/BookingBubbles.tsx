@@ -96,7 +96,12 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
       void load();
     };
 
+    const handleBookingsUpdate = () => {
+      void load();
+    };
+
     window.addEventListener("user-settings-updated", handleSettingsUpdate as EventListener);
+    window.addEventListener("user-bookings-updated", handleBookingsUpdate as EventListener);
 
     const intervalId = window.setInterval(() => {
       void load();
@@ -105,6 +110,7 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
     return () => {
       mounted = false;
       window.removeEventListener("user-settings-updated", handleSettingsUpdate as EventListener);
+      window.removeEventListener("user-bookings-updated", handleBookingsUpdate as EventListener);
       window.clearInterval(intervalId);
     };
   }, []);

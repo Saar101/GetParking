@@ -89,6 +89,7 @@ export default function BookingsTable({ isOpen, onClose }: BookingsTableProps) {
 
     try {
       await releaseParkingSpaceReservation(spaceId, userDocId);
+      window.dispatchEvent(new CustomEvent("user-bookings-updated"));
       await loadBookings();
     } catch (cancelError) {
       const message = cancelError instanceof Error ? cancelError.message : String(cancelError);
@@ -119,6 +120,22 @@ export default function BookingsTable({ isOpen, onClose }: BookingsTableProps) {
       }
     };
   }, [isOpen, isRendered]);
+
+  useEffect(() => {
+    const handleBookingsUpdate = () => {
+      if (!isOpen) {
+        return;
+      }
+
+      void loadBookings();
+    };
+
+    window.addEventListener("user-bookings-updated", handleBookingsUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener("user-bookings-updated", handleBookingsUpdate as EventListener);
+    };
+  }, [isOpen]);
 
   const summary = useMemo(() => {
     const active = bookings.filter((item) => item.status === "active").length;

@@ -45,6 +45,10 @@ export default function ParkingInfo({
   const [reservedByUserDocId, setReservedByUserDocId] = useState<string | null>(null);
   const [reservationData, setReservationData] = useState<ReservationData | null>(null);
 
+  const notifyBookingChange = () => {
+    window.dispatchEvent(new CustomEvent("user-bookings-updated"));
+  };
+
   useEffect(() => {
     if (!isOpen) {
       setHasRecommendedLocal(false);
@@ -102,6 +106,7 @@ export default function ParkingInfo({
       setReservedByUserDocId(currentUserDocId);
       setShowReservation(false);
       setShowApproved(true);
+      notifyBookingChange();
       onBook();
     } catch (error) {
       console.error("שגיאה בשמירת ההזמנה ב-Firestore:", error);
@@ -128,6 +133,7 @@ export default function ParkingInfo({
       setReservedSpaceId(null);
       setReservedByUserDocId(null);
       setReservationData(null);
+      notifyBookingChange();
     } catch (error) {
       console.error('שגיאה בשחרור החנייה:', error);
       alert('לא הצלחנו לשחרר את החנייה כרגע. נסה שוב.');
