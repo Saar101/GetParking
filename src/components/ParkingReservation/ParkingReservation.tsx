@@ -7,6 +7,8 @@ interface ParkingReservationProps {
   onConfirm?: (data: ReservationData) => void;
   parkingLotName?: string;
   initialDurationHours?: number;
+  initialStartTime?: string;
+  useCurrentStartTime?: boolean;
 }
 
 export interface ReservationData {
@@ -38,18 +40,20 @@ export default function ParkingReservation({
   onConfirm,
   parkingLotName = "החניון",
   initialDurationHours = 2,
+  initialStartTime = getCurrentTime(),
+  useCurrentStartTime = true,
 }: ParkingReservationProps) {
   const dateInputRef = useRef<HTMLInputElement | null>(null);
   const timeInputRef = useRef<HTMLInputElement | null>(null);
   const [date, setDate] = useState(getCurrentDate());
-  const [startTime, setStartTime] = useState(getCurrentTime());
+  const [startTime, setStartTime] = useState(initialStartTime);
   const [durationHours, setDurationHours] = useState(initialDurationHours);
   const durationOptions = Array.from({ length: 24 }, (_, index) => index + 1);
 
   // Reset to current date/time when popup opens
   const handleOpen = () => {
     setDate(getCurrentDate());
-    setStartTime(getCurrentTime());
+    setStartTime(useCurrentStartTime ? getCurrentTime() : initialStartTime);
     setDurationHours(initialDurationHours);
   };
 
@@ -57,7 +61,7 @@ export default function ParkingReservation({
     if (isOpen) {
       handleOpen();
     }
-  }, [isOpen, initialDurationHours]);
+  }, [isOpen, initialDurationHours, initialStartTime, useCurrentStartTime]);
 
   const openDatePicker = () => {
     const input = dateInputRef.current;

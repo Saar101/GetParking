@@ -45,6 +45,8 @@ export default function ParkingInfo({
   const [reservedByUserDocId, setReservedByUserDocId] = useState<string | null>(null);
   const [reservationData, setReservationData] = useState<ReservationData | null>(null);
   const [defaultDurationHours, setDefaultDurationHours] = useState(2);
+  const [defaultArrivalTime, setDefaultArrivalTime] = useState("09:00");
+  const [defaultArrivalTimeUsesCurrentTime, setDefaultArrivalTimeUsesCurrentTime] = useState(true);
 
   const notifyBookingChange = () => {
     window.dispatchEvent(new CustomEvent("user-bookings-updated"));
@@ -67,9 +69,13 @@ export default function ParkingInfo({
       try {
         const settings = await getCurrentUserSettings();
         setDefaultDurationHours(settings.defaultDurationHours);
+        setDefaultArrivalTime(settings.defaultArrivalTime);
+        setDefaultArrivalTimeUsesCurrentTime(settings.defaultArrivalTimeUsesCurrentTime);
       } catch (loadError) {
         console.error('שגיאה בטעינת ברירת המחדל של משך החניה:', loadError);
         setDefaultDurationHours(2);
+        setDefaultArrivalTime(new Date().toTimeString().slice(0, 5));
+        setDefaultArrivalTimeUsesCurrentTime(true);
       }
     };
 
@@ -223,6 +229,8 @@ export default function ParkingInfo({
           onConfirm={handleReservationConfirm}
           parkingLotName={parkingSpace.address}
           initialDurationHours={defaultDurationHours}
+          initialStartTime={defaultArrivalTime}
+          useCurrentStartTime={defaultArrivalTimeUsesCurrentTime}
         />
 
         <ParkingApproved

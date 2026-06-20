@@ -36,6 +36,7 @@ export type UserBase = {
   defaultDurationHours?: number;
   defaultSearchRadiusKm?: number;
   defaultArrivalTime?: string;
+  defaultArrivalTimeUsesCurrentTime?: boolean;
   notificationsEnabled?: boolean;
   bookingHistoryDetails?: Record<string, BookingHistorySnapshot>;
   favoriteParkingLotIds?: string[];
@@ -64,8 +65,20 @@ export type UserSettings = {
   defaultDurationHours: number;
   defaultSearchRadiusKm: number;
   defaultArrivalTime: string;
+  defaultArrivalTimeUsesCurrentTime: boolean;
   notificationsEnabled: boolean;
 };
+
+function getCurrentTime(): string {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function getDefaultArrivalTime(): string {
+  return getCurrentTime();
+}
 
 const DEFAULT_USER_SETTINGS: UserSettings = {
   displayName: "לקוח GetParking",
@@ -73,7 +86,8 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
   licensePlate: "",
   defaultDurationHours: 2,
   defaultSearchRadiusKm: 250,
-  defaultArrivalTime: "09:00",
+  defaultArrivalTime: getDefaultArrivalTime(),
+  defaultArrivalTimeUsesCurrentTime: true,
   notificationsEnabled: true,
 };
 
@@ -223,7 +237,11 @@ export async function getCurrentUserSettings(): Promise<UserSettings> {
         ? user.defaultDurationHours
         : DEFAULT_USER_SETTINGS.defaultDurationHours,
     defaultSearchRadiusKm,
-    defaultArrivalTime: user?.defaultArrivalTime ?? DEFAULT_USER_SETTINGS.defaultArrivalTime,
+    defaultArrivalTime: user?.defaultArrivalTime ?? getDefaultArrivalTime(),
+    defaultArrivalTimeUsesCurrentTime:
+      typeof user?.defaultArrivalTimeUsesCurrentTime === "boolean"
+        ? user.defaultArrivalTimeUsesCurrentTime
+        : DEFAULT_USER_SETTINGS.defaultArrivalTimeUsesCurrentTime,
     notificationsEnabled:
       typeof user?.notificationsEnabled === "boolean"
         ? user.notificationsEnabled
@@ -272,6 +290,9 @@ export async function updateCurrentUserSettings(
       : {}),
     ...(patch.defaultArrivalTime !== undefined
       ? { defaultArrivalTime: patch.defaultArrivalTime }
+      : {}),
+    ...(patch.defaultArrivalTimeUsesCurrentTime !== undefined
+      ? { defaultArrivalTimeUsesCurrentTime: Boolean(patch.defaultArrivalTimeUsesCurrentTime) }
       : {}),
     ...(patch.notificationsEnabled !== undefined
       ? { notificationsEnabled: Boolean(patch.notificationsEnabled) }
