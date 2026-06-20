@@ -81,7 +81,11 @@ export default function App() {
 
   return (
     <>
-      <SidBar onLogout={handleLogout} userName={user.displayName ?? user.email ?? "משתמש"} />
+      <SidBar
+        onLogout={handleLogout}
+        onBookingsClick={() => setShowBookings(true)}
+        userName={user.displayName ?? user.email ?? "משתמש"}
+      />
       <div style={{ position: 'fixed', top: 20, left: 20, zIndex: 1100, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <button
           onClick={handleLogout}
@@ -132,9 +136,6 @@ export default function App() {
       <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
         <button onClick={() => setShowParkingInfo(true)} style={{ padding: "8px 16px", cursor: "pointer" }}>
           Show Parking Info
-        </button>
-        <button onClick={() => setShowBookings(true)} style={{ padding: "8px 16px", cursor: "pointer" }}>
-          ההזמנות שלי
         </button>
       </div>
 
