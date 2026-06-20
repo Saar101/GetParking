@@ -10,6 +10,10 @@
   animation: user-settings-fade-in 220ms ease-out;
 }
 
+.user-settings-overlay--closing {
+  animation: user-settings-fade-out 240ms ease-in forwards;
+}
+
 .user-settings-panel {
   width: min(760px, 100%);
   max-height: 90vh;
@@ -22,6 +26,11 @@
   display: grid;
   gap: 14px;
   animation: user-settings-pop 360ms cubic-bezier(0.2, 0.85, 0.24, 1.08);
+  transform-origin: center top;
+}
+
+.user-settings-panel--closing {
+  animation: user-settings-pop-out 240ms ease-in forwards;
 }
 
 .user-settings-header {
@@ -29,6 +38,11 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+}
+
+.user-settings-header > div {
+  text-align: right;
+  flex: 1;
 }
 
 .user-settings-eyebrow {
@@ -225,6 +239,11 @@
   to { opacity: 1; }
 }
 
+@keyframes user-settings-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 @keyframes user-settings-pop {
   0% {
     opacity: 0;
@@ -237,6 +256,17 @@
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes user-settings-pop-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
   }
 }
 
@@ -257,6 +287,11 @@
   .user-settings-overlay,
   .user-settings-grid--editing .user-settings-field,
   .user-settings-grid--editing .user-settings-toggle {
+    animation: none;
+  }
+
+  .user-settings-overlay--closing,
+  .user-settings-panel--closing {
     animation: none;
   }
 

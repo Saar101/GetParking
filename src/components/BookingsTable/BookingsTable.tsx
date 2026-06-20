@@ -53,9 +53,13 @@ function getStatusLabel(status: UserBookingRow["status"]) {
 export default function BookingsTable({ isOpen, onClose }: BookingsTableProps) {
   const [bookings, setBookings] = useState<UserBookingRow[]>([]);
   const [userDocId, setUserDocId] = useState<string | null>(null);
+  const [isRendered, setIsRendered] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [cancelingSpaceId, setCancelingSpaceId] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  const BOOKING_PANEL_ANIMATION_MS = 260;
 
   const loadBookings = async () => {
     setLoading(true);
@@ -95,12 +99,26 @@ export default function BookingsTable({ isOpen, onClose }: BookingsTableProps) {
   };
 
   useEffect(() => {
-    if (!isOpen) {
-      return;
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+
+    if (isOpen) {
+      setIsRendered(true);
+      setIsClosing(false);
+      void loadBookings();
+    } else if (isRendered) {
+      setIsClosing(true);
+      closeTimer = setTimeout(() => {
+        setIsRendered(false);
+        setIsClosing(false);
+      }, BOOKING_PANEL_ANIMATION_MS);
     }
 
-    void loadBookings();
-  }, [isOpen]);
+    return () => {
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+      }
+    };
+  }, [isOpen, isRendered]);
 
   const summary = useMemo(() => {
     const active = bookings.filter((item) => item.status === "active").length;
@@ -110,13 +128,19 @@ export default function BookingsTable({ isOpen, onClose }: BookingsTableProps) {
     return { active, future, past };
   }, [bookings]);
 
-  if (!isOpen) {
+  if (!isRendered) {
     return null;
   }
 
   return (
-    <div className="bookings-overlay" onClick={onClose}>
-      <section className="bookings-panel" onClick={(event) => event.stopPropagation()}>
+    <div
+      className={`bookings-overlay ${isClosing ? "bookings-overlay--closing" : ""}`}
+      onClick={onClose}
+    >
+      <section
+        className={`bookings-panel ${isClosing ? "bookings-panel--closing" : ""}`}
+        onClick={(event) => event.stopPropagation()}
+      >
         <header className="bookings-header">
           <div>
             <p className="bookings-eyebrow">My bookings</p>

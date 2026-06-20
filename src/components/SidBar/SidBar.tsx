@@ -4,11 +4,18 @@ import './SidBar.css';
 type SidBarProps = {
   onLogout?: () => void;
   onBookingsClick?: () => void;
+  onFavoritesClick?: () => void;
   onSettingsClick?: () => void;
   userName?: string;
 };
 
-export default function SidBar({ onLogout, onBookingsClick, onSettingsClick, userName }: SidBarProps) {
+export default function SidBar({
+  onLogout,
+  onBookingsClick,
+  onFavoritesClick,
+  onSettingsClick,
+  userName,
+}: SidBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState('find');
 
@@ -29,6 +36,11 @@ export default function SidBar({ onLogout, onBookingsClick, onSettingsClick, use
 
     if (pageId === 'bookings') {
       onBookingsClick?.();
+      return;
+    }
+
+    if (pageId === 'favorites') {
+      onFavoritesClick?.();
       return;
     }
 

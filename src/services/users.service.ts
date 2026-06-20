@@ -1,6 +1,7 @@
 import { auth, db } from "../firebase";
 import {
   arrayUnion,
+  arrayRemove,
   collection,
   doc,
   getDoc,
@@ -26,6 +27,7 @@ export type UserBase = {
   defaultSearchRadiusKm?: number;
   defaultArrivalTime?: string;
   notificationsEnabled?: boolean;
+  favoriteParkingLotIds?: string[];
   createdAt?: any; // serverTimestamp (optional to keep it simple)
 };
 
@@ -114,6 +116,7 @@ export async function syncAuthenticatedUserRecord() {
         email,
         authUid: currentUser.uid,
         bookingHistory: [],
+        favoriteParkingLotIds: [],
         parkingLotId: null,
         parkingSpaceId: null,
       },
@@ -151,6 +154,18 @@ export async function updateUser(userId: string, patch: Partial<UserDoc>) {
 export async function addBookingHistoryId(userId: string, spaceId: string) {
   await updateDoc(doc(db, usersCol, userId), {
     bookingHistory: arrayUnion(spaceId),
+  } as any);
+}
+
+export async function addFavoriteParkingLotId(userId: string, lotId: string) {
+  await updateDoc(doc(db, usersCol, userId), {
+    favoriteParkingLotIds: arrayUnion(lotId),
+  } as any);
+}
+
+export async function removeFavoriteParkingLotId(userId: string, lotId: string) {
+  await updateDoc(doc(db, usersCol, userId), {
+    favoriteParkingLotIds: arrayRemove(lotId),
   } as any);
 }
 
@@ -198,6 +213,29 @@ export async function getCurrentUserSettings(): Promise<UserSettings> {
         ? user.notificationsEnabled
         : DEFAULT_USER_SETTINGS.notificationsEnabled,
   };
+}
+
+export async function getCurrentFavoriteParkingLotIds(): Promise<string[]> {
+  const userDocId = await getCurrentBookingUserDocId();
+  const userSnap = await getDoc(doc(db, usersCol, userDocId));
+
+  if (!userSnap.exists()) {
+    return [];
+  }
+
+  const user = userSnap.data() as Partial<UserDoc>;
+
+  return Array.isArray(user.favoriteParkingLotIds) ? user.favoriteParkingLotIds : [];
+}
+
+export async function addCurrentUserFavoriteParkingLot(lotId: string): Promise<void> {
+  const userDocId = await getCurrentBookingUserDocId();
+  await addFavoriteParkingLotId(userDocId, lotId);
+}
+
+export async function removeCurrentUserFavoriteParkingLot(lotId: string): Promise<void> {
+  const userDocId = await getCurrentBookingUserDocId();
+  await removeFavoriteParkingLotId(userDocId, lotId);
 }
 
 export async function updateCurrentUserSettings(

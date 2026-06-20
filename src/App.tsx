@@ -10,6 +10,7 @@ import { syncAuthenticatedUserRecord } from "./services/users.service";
 import GoogleMapTest from "./components/GoogleMapTest.tsx/GoogleMapTest";
 import BookingsTable from "./components/BookingsTable/BookingsTable";
 import BookingBubbles from "./components/BookingBubbles/BookingBubbles";
+import FavoritesTable from "./components/FavoritesTable/FavoritesTable";
 import UserSettings from "./components/UserSettings/UserSettings";
 import ParkingInfo from "./components/ParkingInfo/ParkingInfo";
 import SidBar from "./components/SidBar/SidBar";
@@ -22,6 +23,7 @@ export default function App() {
   const [showParkingInfo, setShowParkingInfo] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [showBookings, setShowBookings] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
@@ -87,6 +89,7 @@ export default function App() {
       <SidBar
         onLogout={handleLogout}
         onBookingsClick={() => setShowBookings(true)}
+        onFavoritesClick={() => setShowFavorites(true)}
         onSettingsClick={() => setShowSettings(true)}
         userName={user.displayName ?? user.email ?? "משתמש"}
       />
@@ -161,6 +164,7 @@ export default function App() {
       />
       <BookingBubbles onOpenBookings={() => setShowBookings(true)} />
       <BookingsTable isOpen={showBookings} onClose={() => setShowBookings(false)} />
+      <FavoritesTable isOpen={showFavorites} onClose={() => setShowFavorites(false)} />
       <UserSettings isOpen={showSettings} onClose={() => setShowSettings(false)} />
       </div>
     </>

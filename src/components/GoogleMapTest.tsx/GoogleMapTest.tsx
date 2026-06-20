@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { addParkingLotRecommendation, listParkingLots, type ParkingLotDoc } from "../../services/parkingLots.service";
+import { addCurrentUserFavoriteParkingLot } from "../../services/users.service";
 import ChatConsultation from "../ChatConsultation/ChatConsultation";
 import ParkingInfo from "../ParkingInfo/ParkingInfo";
 import "./GoogleMapTest.css";
@@ -461,6 +462,9 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
     setIsRecommending(true);
     try {
       await addParkingLotRecommendation(selectedParkingLot.id);
+      void addCurrentUserFavoriteParkingLot(selectedParkingLot.id).catch((favoriteError) => {
+        console.error("Error saving favorite parking lot:", favoriteError);
+      });
       setRecommendedLotIds((current) => [...current, selectedParkingLot.id]);
       setParkingLots((current) => {
         const updatedLots = current.map((lot) => {

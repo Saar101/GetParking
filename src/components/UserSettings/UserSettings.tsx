@@ -21,9 +21,13 @@ const INITIAL_SETTINGS: UserSettingsModel = {
   notificationsEnabled: true,
 };
 
+const SETTINGS_ANIMATION_MS = 240;
+
 export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
   const [settings, setSettings] = useState<UserSettingsModel>(INITIAL_SETTINGS);
   const [draft, setDraft] = useState<UserSettingsModel>(INITIAL_SETTINGS);
+  const [isRendered, setIsRendered] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,12 +53,26 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
   };
 
   useEffect(() => {
-    if (!isOpen) {
-      return;
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+
+    if (isOpen) {
+      setIsRendered(true);
+      setIsClosing(false);
+      void loadSettings();
+    } else if (isRendered) {
+      setIsClosing(true);
+      closeTimer = setTimeout(() => {
+        setIsRendered(false);
+        setIsClosing(false);
+      }, SETTINGS_ANIMATION_MS);
     }
 
-    void loadSettings();
-  }, [isOpen]);
+    return () => {
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+      }
+    };
+  }, [isOpen, isRendered]);
 
   const handleSave = async () => {
     if (!draft.displayName.trim()) {
@@ -119,13 +137,19 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
     setIsEditing(false);
   };
 
-  if (!isOpen) {
+  if (!isRendered) {
     return null;
   }
 
   return (
-    <div className="user-settings-overlay" onClick={onClose}>
-      <section className="user-settings-panel" onClick={(event) => event.stopPropagation()}>
+    <div
+      className={`user-settings-overlay ${isClosing ? "user-settings-overlay--closing" : ""}`}
+      onClick={onClose}
+    >
+      <section
+        className={`user-settings-panel ${isClosing ? "user-settings-panel--closing" : ""}`}
+        onClick={(event) => event.stopPropagation()}
+      >
         <header className="user-settings-header">
           <div>
             <p className="user-settings-eyebrow">Default preferences</p>
