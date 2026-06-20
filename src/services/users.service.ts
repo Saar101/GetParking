@@ -72,7 +72,7 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
   email: "",
   licensePlate: "",
   defaultDurationHours: 2,
-  defaultSearchRadiusKm: 1,
+  defaultSearchRadiusKm: 250,
   defaultArrivalTime: "09:00",
   notificationsEnabled: true,
 };
@@ -206,6 +206,13 @@ export async function getCurrentUserSettings(): Promise<UserSettings> {
   const userDocId = await getCurrentBookingUserDocId();
   const userSnap = await getDoc(doc(db, usersCol, userDocId));
   const user = userSnap.exists() ? (userSnap.data() as Partial<UserDoc>) : {};
+  const storedSearchRadius = user?.defaultSearchRadiusKm;
+  const defaultSearchRadiusKm =
+    typeof storedSearchRadius === "number"
+      ? storedSearchRadius <= 20
+        ? storedSearchRadius * 1000
+        : storedSearchRadius
+      : DEFAULT_USER_SETTINGS.defaultSearchRadiusKm;
 
   return {
     displayName: user?.name ?? DEFAULT_USER_SETTINGS.displayName,
@@ -215,10 +222,7 @@ export async function getCurrentUserSettings(): Promise<UserSettings> {
       typeof user?.defaultDurationHours === "number"
         ? user.defaultDurationHours
         : DEFAULT_USER_SETTINGS.defaultDurationHours,
-    defaultSearchRadiusKm:
-      typeof user?.defaultSearchRadiusKm === "number"
-        ? user.defaultSearchRadiusKm
-        : DEFAULT_USER_SETTINGS.defaultSearchRadiusKm,
+    defaultSearchRadiusKm,
     defaultArrivalTime: user?.defaultArrivalTime ?? DEFAULT_USER_SETTINGS.defaultArrivalTime,
     notificationsEnabled:
       typeof user?.notificationsEnabled === "boolean"

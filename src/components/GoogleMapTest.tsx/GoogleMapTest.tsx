@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
 import { addParkingLotRecommendation, listParkingLots, type ParkingLotDoc } from "../../services/parkingLots.service";
-import { addCurrentUserFavoriteParkingLot } from "../../services/users.service";
+import { addCurrentUserFavoriteParkingLot, getCurrentUserSettings } from "../../services/users.service";
 import ChatConsultation from "../ChatConsultation/ChatConsultation";
 import ParkingInfo from "../ParkingInfo/ParkingInfo";
 import "./GoogleMapTest.css";
@@ -315,7 +315,7 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
   const [status, setStatus] = useState<
     "idle" | "locating" | "ready" | "denied" | "unsupported"
   >("idle");
-  const [radius, setRadius] = useState(250); // in meters
+  const [radius, setRadius] = useState(1000);
   const [isRadiusExpanded, setIsRadiusExpanded] = useState(false);
   const [isRadiusClosing, setIsRadiusClosing] = useState(false);
   const [parkingLots, setParkingLots] = useState<ParkingLotMarker[]>([]);
@@ -368,6 +368,20 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
 
     let isMounted = true;
 
+    const loadDefaultRadius = async () => {
+      try {
+        const settings = await getCurrentUserSettings();
+        if (isMounted) {
+          setRadius(Math.min(1000, Math.max(250, settings.defaultSearchRadiusKm)));
+        }
+      } catch (error) {
+        console.error("Error loading default search radius:", error);
+        if (isMounted) {
+          setRadius(1000);
+        }
+      }
+    };
+
     const loadParkingLots = async () => {
       try {
         const lots = await listParkingLots();
@@ -382,6 +396,7 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
       }
     };
 
+    void loadDefaultRadius();
     void loadParkingLots();
 
     return () => {
@@ -589,12 +604,12 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
                 }
               }}
             >
-              <label htmlFor="radius-slider">🎯 בחר רדיוס:</label>
+              <label htmlFor="radius-slider">🎯 בחר רדיוס (מטר):</label>
               <input
                 id="radius-slider"
                 type="range"
-                min="50"
-                max="500"
+                min="250"
+                max="1000"
                 step="50"
                 value={radius}
                 onChange={(e) => setRadius(Number(e.target.value))}

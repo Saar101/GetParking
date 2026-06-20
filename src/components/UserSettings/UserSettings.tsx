@@ -16,7 +16,7 @@ const INITIAL_SETTINGS: UserSettingsModel = {
   email: "",
   licensePlate: "",
   defaultDurationHours: 2,
-  defaultSearchRadiusKm: 1,
+  defaultSearchRadiusKm: 250,
   defaultArrivalTime: "09:00",
   notificationsEnabled: true,
 };
@@ -85,8 +85,8 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
       return;
     }
 
-    if (draft.defaultSearchRadiusKm < 1 || draft.defaultSearchRadiusKm > 20) {
-      setError("רדיוס חיפוש ברירת מחדל חייב להיות בין 1 ל-20 קמ.");
+    if (draft.defaultSearchRadiusKm < 250 || draft.defaultSearchRadiusKm > 1000) {
+      setError("רדיוס חיפוש ברירת מחדל חייב להיות בין 250 ל-1000 מטר.");
       return;
     }
 
@@ -218,16 +218,17 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
             </label>
 
             <label className="user-settings-field">
-              <span>רדיוס חיפוש ברירת מחדל (קמ)</span>
+              <span>רדיוס חיפוש ברירת מחדל (מטר)</span>
               <input
                 type="number"
-                min={1}
-                max={20}
+                min={250}
+                max={1000}
+                step={50}
                 value={draft.defaultSearchRadiusKm}
                 onChange={(event) =>
                   setDraft((prev) => ({
                     ...prev,
-                    defaultSearchRadiusKm: Number(event.target.value) || 1,
+                    defaultSearchRadiusKm: Number(event.target.value) || 250,
                   }))
                 }
                 readOnly={!isEditing}

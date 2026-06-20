@@ -5,7 +5,7 @@ import {
   releaseParkingSpaceReservation,
   reserveFirstAvailableParkingSpaceForCustomer,
 } from '../../services/parkingSpaces.service';
-import { getCurrentBookingUserDocId } from '../../services/users.service';
+import { getCurrentBookingUserDocId, getCurrentUserSettings } from '../../services/users.service';
 import './ParkingInfo.css';
 
 interface ParkingSpace {
@@ -44,6 +44,7 @@ export default function ParkingInfo({
   const [reservedSpaceId, setReservedSpaceId] = useState<string | null>(null);
   const [reservedByUserDocId, setReservedByUserDocId] = useState<string | null>(null);
   const [reservationData, setReservationData] = useState<ReservationData | null>(null);
+  const [defaultDurationHours, setDefaultDurationHours] = useState(2);
 
   const notifyBookingChange = () => {
     window.dispatchEvent(new CustomEvent("user-bookings-updated"));
@@ -61,6 +62,18 @@ export default function ParkingInfo({
       setReservationData(null);
       return;
     }
+
+    const loadDefaultDuration = async () => {
+      try {
+        const settings = await getCurrentUserSettings();
+        setDefaultDurationHours(settings.defaultDurationHours);
+      } catch (loadError) {
+        console.error('שגיאה בטעינת ברירת המחדל של משך החניה:', loadError);
+        setDefaultDurationHours(2);
+      }
+    };
+
+    void loadDefaultDuration();
 
     setHasRecommendedLocal(false);
     setIsCelebrating(false);
@@ -209,6 +222,7 @@ export default function ParkingInfo({
           onClose={() => setShowReservation(false)}
           onConfirm={handleReservationConfirm}
           parkingLotName={parkingSpace.address}
+          initialDurationHours={defaultDurationHours}
         />
 
         <ParkingApproved

@@ -90,7 +90,7 @@ export async function getAvailableParkingSpacesForLot(lotId: string) {
       id: spaceDoc.id,
       ...(spaceDoc.data() as ParkingSpaceDoc),
     }))
-    .filter((space) => space.parkingLotId === lotId && space.status === "available")
+    .filter((space) => space.parkingLotId === lotId && space.status !== "occupied")
     .sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -169,7 +169,7 @@ export async function reserveParkingSpaceForCustomer(
 
     const space = spaceSnap.data() as ParkingSpaceDoc;
 
-    if (space.status === "reserved" || space.status === "occupied") {
+    if (space.status === "occupied") {
       throw new Error(`Space ${spaceId} is already reserved or occupied`);
     }
 

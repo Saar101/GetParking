@@ -6,6 +6,7 @@ interface ParkingReservationProps {
   onClose: () => void;
   onConfirm?: (data: ReservationData) => void;
   parkingLotName?: string;
+  initialDurationHours?: number;
 }
 
 export interface ReservationData {
@@ -36,25 +37,27 @@ export default function ParkingReservation({
   onClose,
   onConfirm,
   parkingLotName = "החניון",
+  initialDurationHours = 2,
 }: ParkingReservationProps) {
   const dateInputRef = useRef<HTMLInputElement | null>(null);
   const timeInputRef = useRef<HTMLInputElement | null>(null);
   const [date, setDate] = useState(getCurrentDate());
   const [startTime, setStartTime] = useState(getCurrentTime());
-  const [durationHours, setDurationHours] = useState(2);
+  const [durationHours, setDurationHours] = useState(initialDurationHours);
+  const durationOptions = Array.from({ length: 24 }, (_, index) => index + 1);
 
   // Reset to current date/time when popup opens
   const handleOpen = () => {
     setDate(getCurrentDate());
     setStartTime(getCurrentTime());
-    setDurationHours(2);
+    setDurationHours(initialDurationHours);
   };
 
   useEffect(() => {
     if (isOpen) {
       handleOpen();
     }
-  }, [isOpen]);
+  }, [isOpen, initialDurationHours]);
 
   const openDatePicker = () => {
     const input = dateInputRef.current;
@@ -180,14 +183,11 @@ export default function ParkingReservation({
                 onChange={(e) => setDurationHours(Number(e.target.value))}
                 className="pr-select"
               >
-                <option value={1}>1 שעה</option>
-                <option value={2}>2 שעות</option>
-                <option value={3}>3 שעות</option>
-                <option value={4}>4 שעות</option>
-                <option value={6}>6 שעות</option>
-                <option value={8}>8 שעות</option>
-                <option value={12}>12 שעות</option>
-                <option value={24}>24 שעות</option>
+                {durationOptions.map((hours) => (
+                  <option key={hours} value={hours}>
+                    {hours} {hours === 1 ? "שעה" : "שעות"}
+                  </option>
+                ))}
               </select>
               <span className="pr-duration-display">{durationHours} ש׳</span>
             </div>
