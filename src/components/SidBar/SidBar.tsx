@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './SidBar.css';
+
+type SidebarPageId = 'find' | 'bookings' | 'favorites' | 'settings' | 'logout';
 
 type SidBarProps = {
   onLogout?: () => void;
   onBookingsClick?: () => void;
   onFavoritesClick?: () => void;
   onSettingsClick?: () => void;
+  activePage?: SidebarPageId;
+  onPageChange?: (pageId: SidebarPageId) => void;
   userName?: string;
 };
 
@@ -14,10 +18,45 @@ export default function SidBar({
   onBookingsClick,
   onFavoritesClick,
   onSettingsClick,
+  activePage = 'find',
+  onPageChange,
   userName,
 }: SidBarProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [currentPage, setCurrentPage] = useState('find');
+  const [animatedPage, setAnimatedPage] = useState<SidebarPageId | null>(null);
+  const [clickedPage, setClickedPage] = useState<SidebarPageId | null>(null);
+  const didMountRef = useRef(false);
+  const welcomeInitial = (userName?.trim().charAt(0) || '👋').toUpperCase();
+
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    setAnimatedPage(activePage);
+    const timeoutId = window.setTimeout(() => {
+      setAnimatedPage(null);
+    }, 360);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [activePage]);
+
+  useEffect(() => {
+    if (!clickedPage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setClickedPage(null);
+    }, 360);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [clickedPage]);
 
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
@@ -31,8 +70,10 @@ export default function SidBar({
     { id: 'logout', icon: '🚪', label: 'התנתק' },
   ];
 
-  const handleNavClick = (pageId: string) => {
-    setCurrentPage(pageId);
+  const handleNavClick = (pageId: SidebarPageId) => {
+    const nextPage = pageId;
+    setClickedPage(nextPage);
+    onPageChange?.(nextPage);
 
     if (pageId === 'bookings') {
       onBookingsClick?.();
@@ -66,11 +107,23 @@ export default function SidBar({
         </span>
       </button>
 
+      {userName ? (
+        <div className="sidebar-welcome">
+          <span className="sidebar-welcome-badge" aria-hidden="true">
+            {welcomeInitial}
+          </span>
+          <div className="sidebar-welcome-text">
+            <span className="sidebar-welcome-label">ברוך הבא</span>
+            <span className="sidebar-welcome-name">{userName}</span>
+          </div>
+        </div>
+      ) : null}
+
       <nav className="sidebar-nav">
         {navItems.map((item) => (
           <button
             key={item.id}
-            className={`nav-button ${currentPage === item.id ? 'active' : ''}`}
+            className={`nav-button ${activePage === item.id ? 'active' : ''} ${animatedPage === item.id || clickedPage === item.id ? 'nav-button--pulse' : ''}`}
             onClick={() => handleNavClick(item.id)}
             title={item.label}
           >
@@ -80,11 +133,7 @@ export default function SidBar({
         ))}
       </nav>
 
-      {isExpanded && (
-        <div className="sidebar-content">
-          {userName ? <p className="sidebar-user">{userName}</p> : null}
-        </div>
-      )}
+      {isExpanded ? <div className="sidebar-content" /> : null}
     </div>
   );
 }

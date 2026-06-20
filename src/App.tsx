@@ -25,6 +25,7 @@ export default function App() {
   const [showBookings, setShowBookings] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [activeSidebarPage, setActiveSidebarPage] = useState<'find' | 'bookings' | 'favorites' | 'settings' | 'logout'>('find');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
@@ -76,6 +77,21 @@ export default function App() {
     await signOut(auth);
   };
 
+  const handleCloseBookings = () => {
+    setShowBookings(false);
+    setActiveSidebarPage('find');
+  };
+
+  const handleCloseFavorites = () => {
+    setShowFavorites(false);
+    setActiveSidebarPage('find');
+  };
+
+  const handleCloseSettings = () => {
+    setShowSettings(false);
+    setActiveSidebarPage('find');
+  };
+
   if (!authReady) {
     return <AuthScreen subtitle="טוען את מסך הכניסה..." />;
   }
@@ -91,6 +107,8 @@ export default function App() {
         onBookingsClick={() => setShowBookings(true)}
         onFavoritesClick={() => setShowFavorites(true)}
         onSettingsClick={() => setShowSettings(true)}
+        activePage={activeSidebarPage}
+        onPageChange={setActiveSidebarPage}
         userName={user.displayName ?? user.email ?? "משתמש"}
       />
       <div style={{ position: 'fixed', top: 20, left: 20, zIndex: 1100, display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -163,9 +181,9 @@ export default function App() {
         onRecommend={() => console.log("Recommend clicked")}
       />
       <BookingBubbles onOpenBookings={() => setShowBookings(true)} />
-      <BookingsTable isOpen={showBookings} onClose={() => setShowBookings(false)} />
-      <FavoritesTable isOpen={showFavorites} onClose={() => setShowFavorites(false)} />
-      <UserSettings isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <BookingsTable isOpen={showBookings} onClose={handleCloseBookings} />
+      <FavoritesTable isOpen={showFavorites} onClose={handleCloseFavorites} />
+      <UserSettings isOpen={showSettings} onClose={handleCloseSettings} />
       </div>
     </>
   );
