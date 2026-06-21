@@ -161,14 +161,6 @@ export default function App() {
                 Reset spaces
               </button>
             </div>
-            <button
-              className="gmt-open-button-circular"
-              onClick={() => setShowMap(true)}
-              title="חפש כתובת"
-            >
-              🗺️
-            </button>
-
             <div style={{ padding: "72px 24px 24px" }}>
             <div className="gp-title-container" style={{ marginTop: 84 }}>
               <img src={appTitleLogo} alt="GetParking" className="gp-title-logo" />
