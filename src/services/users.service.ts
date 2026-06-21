@@ -31,6 +31,7 @@ export type UserBase = {
   name: string;
   role: UserRole;
   email?: string | null;
+  phoneNumber?: string | null;
   authUid?: string | null;
   licensePlate?: string | null;
   defaultDurationHours?: number;

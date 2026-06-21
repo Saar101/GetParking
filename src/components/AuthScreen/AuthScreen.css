@@ -3,6 +3,7 @@
   min-height: 100vh;
   overflow: hidden;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 24px;
@@ -10,6 +11,28 @@
     radial-gradient(circle at top left, rgba(10, 121, 179, 0.28), transparent 34%),
     radial-gradient(circle at bottom right, rgba(8, 80, 122, 0.32), transparent 30%),
     linear-gradient(135deg, #06131f 0%, #0a2133 48%, #0f3650 100%);
+}
+
+.auth-screen__logo {
+  position: relative;
+  z-index: 1;
+  width: clamp(200px, 31vw, 360px);
+  height: auto;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.36));
+  animation: auth-logo-float 3.8s ease-in-out infinite;
+}
+
+@keyframes auth-logo-float {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 .auth-screen__background {
@@ -38,6 +61,7 @@
 .auth-card {
   position: relative;
   z-index: 1;
+  transform: translateY(-34px);
   width: min(100%, 520px);
   padding: 34px 30px 30px;
   border-radius: 28px;
@@ -84,6 +108,14 @@
   color: #d4efff;
   font-size: 0.92rem;
   text-align: center;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background-color 0.22s ease, border-color 0.22s ease;
+}
+
+.auth-card__benefits div:hover {
+  transform: translateY(-2px) scale(1.03);
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(142, 219, 255, 0.5);
+  box-shadow: 0 10px 20px rgba(10, 121, 179, 0.2);
 }
 
 .auth-card__form {
@@ -106,6 +138,7 @@
   background: rgba(255, 255, 255, 0.08);
   color: #f5fbff;
   outline: none;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, background-color 0.22s ease;
 }
 
 .auth-card__input::placeholder {
@@ -123,6 +156,16 @@
 .auth-card__input--credential::placeholder {
   text-align: right;
   direction: ltr;
+}
+
+.auth-card__input[type="text"]:hover,
+.auth-card__input[type="tel"]:hover,
+.auth-card__input[type="email"]:hover,
+.auth-card__input[type="password"]:hover {
+  transform: translateY(-1px);
+  border-color: rgba(142, 219, 255, 0.58);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 24px rgba(10, 121, 179, 0.16);
 }
 
 .auth-card__input:focus {
@@ -276,6 +319,11 @@
     padding: 16px;
   }
 
+  .auth-screen__logo {
+    width: clamp(180px, 56vw, 280px);
+    margin-bottom: 6px;
+  }
+
   .auth-card {
     padding: 24px 18px 20px;
     border-radius: 22px;
@@ -296,5 +344,11 @@
 
   .auth-modal__actions {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-screen__logo {
+    animation: none;
   }
 }

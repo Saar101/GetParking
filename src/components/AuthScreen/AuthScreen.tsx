@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../../firebase";
 import { createUser } from "../../services/users.service";
+import appTitleLogo from "../../assets/ChatGPT Image Jan 26, 2026, 08_22_00 PM.png";
 import "./AuthScreen.css";
 
 type AuthScreenProps = {
@@ -23,6 +24,7 @@ export default function AuthScreen({
   const [password, setPassword] = useState("");
   const [signupName, setSignupName] = useState("");
   const [signupPlate, setSignupPlate] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -57,6 +59,7 @@ export default function AuthScreen({
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedName = signupName.trim();
     const normalizedPlate = signupPlate.trim().toUpperCase();
+    const normalizedPhone = signupPhone.trim();
 
     if (!normalizedName) {
       setError("אנא הזן שם משתמש.");
@@ -83,10 +86,21 @@ export default function AuthScreen({
       return null;
     }
 
+    if (!normalizedPhone) {
+      setError("אנא הזן מספר פלאפון.");
+      return null;
+    }
+
+    if (!/^\+?[\d\s-]{9,15}$/.test(normalizedPhone)) {
+      setError("מספר הפלאפון לא תקין. בדוק את המספר ונסה שוב.");
+      return null;
+    }
+
     return {
       normalizedEmail,
       normalizedName,
       normalizedPlate,
+      normalizedPhone,
       password,
     };
   };
@@ -148,6 +162,7 @@ export default function AuthScreen({
         email: signupData.normalizedEmail,
         authUid: userCredential.user.uid,
         licensePlate: signupData.normalizedPlate,
+        phoneNumber: signupData.normalizedPhone,
         bookingHistory: [],
         parkingLotId: null,
         parkingSpaceId: null,
@@ -178,6 +193,8 @@ export default function AuthScreen({
     <main className="auth-screen">
       <div className="auth-screen__background auth-screen__background--one" />
       <div className="auth-screen__background auth-screen__background--two" />
+
+      <img src={appTitleLogo} alt="GetParking" className="auth-screen__logo" />
 
       <section className="auth-card">
         <div className="auth-card__header">
@@ -291,6 +308,20 @@ export default function AuthScreen({
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="••••••••"
                     autoComplete="new-password"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                  />
+                </label>
+
+                <label className="auth-card__label">
+                  מספר פלאפון
+                  <input
+                    className="auth-card__input auth-card__input--credential"
+                    type="tel"
+                    value={signupPhone}
+                    onChange={(event) => setSignupPhone(event.target.value)}
+                    placeholder="050-1234567"
+                    autoComplete="tel"
                     autoCapitalize="none"
                     spellCheck={false}
                   />
