@@ -140,12 +140,21 @@
 }
 
 .user-settings-field input {
-  width: 100%;
+  width: 98%;
+  margin-inline: auto;
+  box-sizing: border-box;
   border: 1px solid rgba(8, 80, 120, 0.18);
   border-radius: 12px;
   padding: 10px 12px;
   background: #ffffff;
   color: #12374f;
+  text-align: right;
+  direction: ltr;
+}
+
+.user-settings-field input::placeholder {
+  text-align: right;
+  direction: ltr;
 }
 
 .user-settings-field input:focus {
@@ -167,11 +176,27 @@
   align-items: center;
   gap: 10px;
   margin-top: 2px;
+  width: 98%;
+  margin-inline: auto;
+  box-sizing: border-box;
   padding: 12px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(8, 80, 120, 0.12);
   color: #12374f;
+}
+
+.user-settings-field .user-settings-toggle {
+  flex-wrap: nowrap;
+}
+
+.user-settings-field .user-settings-toggle span {
+  white-space: nowrap;
+}
+
+.user-settings-toggle span {
+  text-align: right;
+  flex: 1;
 }
 
 .user-settings-toggle input:disabled + span {
