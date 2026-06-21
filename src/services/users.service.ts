@@ -173,6 +173,17 @@ export async function getUser(userId: string) {
   return snap.exists() ? (snap.data() as DocumentData) : null;
 }
 
+export type UserListItem = UserDoc & { id: string };
+
+export async function listUsers(): Promise<UserListItem[]> {
+  const snap = await getDocs(collection(db, usersCol));
+
+  return snap.docs.map((userDoc) => ({
+    id: userDoc.id,
+    ...(userDoc.data() as UserDoc),
+  }));
+}
+
 export async function updateUser(userId: string, patch: Partial<UserDoc>) {
   await updateDoc(doc(db, usersCol, userId), patch as any);
 }
@@ -215,6 +226,18 @@ export async function setUserRole(userId: string, role: UserRole) {
 
 export async function getCurrentBookingUserDocId() {
   return syncAuthenticatedUserRecord();
+}
+
+export async function getCurrentUserRole(): Promise<UserRole | null> {
+  const userDocId = await getCurrentBookingUserDocId();
+  const userSnap = await getDoc(doc(db, usersCol, userDocId));
+
+  if (!userSnap.exists()) {
+    return null;
+  }
+
+  const user = userSnap.data() as Partial<UserDoc>;
+  return user.role ?? null;
 }
 
 export async function getCurrentUserSettings(): Promise<UserSettings> {

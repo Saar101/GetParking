@@ -76,6 +76,15 @@ export async function getParkingSpace(spaceId: string) {
   return snap.exists() ? (snap.data() as ParkingSpaceDoc) : null;
 }
 
+export async function listParkingSpaces() {
+  const snap = await getDocs(collection(db, spacesCol));
+
+  return snap.docs.map((spaceDoc) => ({
+    id: spaceDoc.id,
+    ...(spaceDoc.data() as ParkingSpaceDoc),
+  }));
+}
+
 export async function updateParkingSpace(
   spaceId: string,
   patch: Partial<ParkingSpaceDoc>

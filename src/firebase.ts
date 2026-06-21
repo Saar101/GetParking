@@ -1,5 +1,9 @@
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import {
+  browserLocalPersistence,
+  browserSessionPersistence,
+  initializeAuth,
+} from "firebase/auth";
 import { initializeFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -19,4 +23,6 @@ export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
 });
 
-export const auth = getAuth(app);
+export const auth = initializeAuth(app, {
+  persistence: [browserLocalPersistence, browserSessionPersistence],
+});
