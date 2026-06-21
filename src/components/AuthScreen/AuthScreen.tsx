@@ -189,14 +189,14 @@ export default function AuthScreen({
         <div className="auth-card__benefits">
           <div>חיפוש חניה חכם</div>
           <div>שמירת הזמנות</div>
-          <div>חיבור ל-Firebase</div>
+          <div>הזמנת חניה מראש</div>
         </div>
 
         <div className="auth-card__form">
           <label className="auth-card__label">
             אימייל
             <input
-              className="auth-card__input"
+              className="auth-card__input auth-card__input--credential"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -210,7 +210,7 @@ export default function AuthScreen({
           <label className="auth-card__label">
             סיסמה
             <input
-              className="auth-card__input"
+              className="auth-card__input auth-card__input--credential"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -246,7 +246,7 @@ export default function AuthScreen({
             <div className="auth-modal__backdrop" onClick={() => !loading && setShowSignupModal(false)} />
             <div className="auth-modal__panel">
               <div className="auth-modal__header">
-                <div>
+                <div className="auth-modal__title-group">
                   <p className="auth-modal__eyebrow">יצירת חשבון</p>
                   <h2 id="signup-modal-title">נשמח להכיר אותך</h2>
                 </div>
@@ -259,7 +259,7 @@ export default function AuthScreen({
                 <label className="auth-card__label">
                   שם משתמש
                   <input
-                    className="auth-card__input"
+                    className="auth-card__input auth-card__input--credential"
                     type="text"
                     value={signupName}
                     onChange={(event) => setSignupName(event.target.value)}
@@ -271,7 +271,7 @@ export default function AuthScreen({
                 <label className="auth-card__label">
                   אימייל
                   <input
-                    className="auth-card__input"
+                    className="auth-card__input auth-card__input--credential"
                     type="email"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
@@ -285,7 +285,7 @@ export default function AuthScreen({
                 <label className="auth-card__label">
                   סיסמה
                   <input
-                    className="auth-card__input"
+                    className="auth-card__input auth-card__input--credential"
                     type="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
@@ -299,7 +299,7 @@ export default function AuthScreen({
                 <label className="auth-card__label">
                   לוחית זיהוי של הרכב
                   <input
-                    className="auth-card__input"
+                    className="auth-card__input auth-card__input--credential"
                     type="text"
                     value={signupPlate}
                     onChange={(event) => setSignupPlate(event.target.value.toUpperCase())}

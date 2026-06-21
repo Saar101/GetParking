@@ -71,6 +71,7 @@
 .auth-card__benefits {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
   margin: 22px 0 28px;
 }
@@ -82,6 +83,7 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #d4efff;
   font-size: 0.92rem;
+  text-align: center;
 }
 
 .auth-card__form {
@@ -108,6 +110,19 @@
 
 .auth-card__input::placeholder {
   color: rgba(245, 251, 255, 0.45);
+}
+
+.auth-card__input--credential {
+  width: 98%;
+  margin-inline: auto;
+  box-sizing: border-box;
+  text-align: right;
+  direction: ltr;
+}
+
+.auth-card__input--credential::placeholder {
+  text-align: right;
+  direction: ltr;
 }
 
 .auth-card__input:focus {
@@ -209,10 +224,15 @@
 
 .auth-modal__header {
   display: flex;
+  flex-direction: row-reverse;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 18px;
+}
+
+.auth-modal__title-group {
+  text-align: right;
 }
 
 .auth-modal__header h2 {
