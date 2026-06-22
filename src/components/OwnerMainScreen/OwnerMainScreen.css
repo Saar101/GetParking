@@ -101,6 +101,42 @@
   color: #09344f;
 }
 
+.owner-main-screen__panel-header {
+  display: flex;
+  direction: rtl;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.owner-main-screen__panel-header h2 {
+  margin-bottom: 0;
+  text-align: right;
+}
+
+.owner-main-screen__show-all-spaces-button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, rgba(10, 121, 179, 0.12) 0%, rgba(69, 179, 255, 0.16) 100%);
+  color: #0a4970;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(8, 80, 120, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease, background 0.2s ease;
+}
+
+.owner-main-screen__show-all-spaces-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow: 0 14px 24px rgba(8, 80, 120, 0.14);
+}
+
+.owner-main-screen__show-all-spaces-button:active {
+  transform: translateY(0) scale(0.985);
+}
+
 .owner-main-screen__lot-list,
 .owner-main-screen__space-grid {
   display: grid;
@@ -115,6 +151,9 @@
   gap: 14px;
   min-height: 160px;
   transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  cursor: pointer;
+  user-select: none;
+  will-change: transform;
 }
 
 .owner-main-screen__lot-card h3,
@@ -131,7 +170,8 @@
 .owner-main-screen__lot-meta {
   display: grid;
   gap: 4px;
-  text-align: left;
+  text-align: right;
+  justify-items: end;
   color: #0a4970;
   font-weight: 700;
 }
@@ -142,12 +182,61 @@
   gap: 12px;
   min-height: 220px;
   transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  will-change: transform, opacity;
+  /* subtle enter animation when the list changes */
+  opacity: 0;
+  animation: ownerSpaceEnter 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--space-index, 0) * 45ms);
+}
+
+.owner-main-screen__space-card--updated {
+  animation:
+    ownerSpaceEnter 260ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards,
+    ownerSpaceFlash 760ms cubic-bezier(0.18, 0.9, 0.22, 1);
+  box-shadow: 0 0 0 1px rgba(10, 121, 179, 0.14), 0 24px 52px rgba(8, 37, 56, 0.16);
+}
+
+.owner-main-screen__space-card--updated-available {
+  box-shadow: 0 0 0 1px rgba(21, 128, 61, 0.14), 0 24px 52px rgba(8, 37, 56, 0.16);
+}
+
+.owner-main-screen__space-card--updated-reserved {
+  box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.14), 0 24px 52px rgba(8, 37, 56, 0.16);
+}
+
+.owner-main-screen__space-card--updated-occupied {
+  box-shadow: 0 0 0 1px rgba(185, 28, 28, 0.14), 0 24px 52px rgba(8, 37, 56, 0.16);
 }
 
 .owner-main-screen__lot-card:hover,
 .owner-main-screen__space-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 24px 52px rgba(8, 37, 56, 0.16);
+}
+
+/* Press animation for lot cards */
+.owner-main-screen__lot-card:active {
+  animation: ownerLotPress 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: center bottom;
+}
+
+@keyframes ownerLotPress {
+  0% {
+    transform: translateY(-3px) scale(1);
+  }
+  50% {
+    transform: translateY(0px) scale(0.985);
+  }
+  100% {
+    transform: translateY(-3px) scale(1);
+  }
+}
+
+/* Visual state for selected lot */
+.owner-main-screen__lot-card--active {
+  border-color: rgba(10, 121, 179, 0.34);
+  box-shadow: 0 28px 64px rgba(8, 37, 56, 0.18);
+  transform: translateY(-3px) scale(1.004);
 }
 
 .owner-main-screen__space-card--available {
@@ -165,6 +254,129 @@
 
 .owner-main-screen__space-card--available {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(236, 253, 245, 0.72) 100%);
+}
+
+@keyframes ownerSpaceEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-8px) scale(1.025);
+  }
+  78% {
+    opacity: 1;
+    transform: translateY(2px) scale(0.992);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ownerSpaceFlash {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(10, 121, 179, 0.0), 0 18px 42px rgba(8, 37, 56, 0.12);
+  }
+  24% {
+    transform: translateY(-10px) scale(1.06);
+    box-shadow: 0 0 0 10px rgba(10, 121, 179, 0.09), 0 24px 52px rgba(8, 37, 56, 0.16);
+  }
+  48% {
+    transform: translateY(2px) scale(0.985);
+    box-shadow: 0 0 0 16px rgba(10, 121, 179, 0.045), 0 22px 48px rgba(8, 37, 56, 0.14);
+  }
+  68% {
+    transform: translateY(-4px) scale(1.022);
+    box-shadow: 0 0 0 6px rgba(10, 121, 179, 0.035), 0 20px 44px rgba(8, 37, 56, 0.13);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(10, 121, 179, 0.0), 0 18px 42px rgba(8, 37, 56, 0.12);
+  }
+}
+
+@keyframes ownerSpaceFlashAvailable {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.0), 0 18px 42px rgba(8, 37, 56, 0.12);
+  }
+  24% {
+    transform: translateY(-10px) scale(1.06);
+    box-shadow: 0 0 0 10px rgba(21, 128, 61, 0.1), 0 24px 52px rgba(8, 37, 56, 0.16);
+  }
+  48% {
+    transform: translateY(2px) scale(0.985);
+    box-shadow: 0 0 0 16px rgba(21, 128, 61, 0.05), 0 22px 48px rgba(8, 37, 56, 0.14);
+  }
+  68% {
+    transform: translateY(-4px) scale(1.022);
+    box-shadow: 0 0 0 6px rgba(21, 128, 61, 0.04), 0 20px 44px rgba(8, 37, 56, 0.13);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(21, 128, 61, 0.0), 0 18px 42px rgba(8, 37, 56, 0.12);
+  }
+}
+
+@keyframes ownerSpaceFlashReserved {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.0), 0 18px 42px rgba(8, 37, 56, 0.12);
+  }
+  24% {
+    transform: translateY(-10px) scale(1.06);
+    box-shadow: 0 0 0 10px rgba(217, 119, 6, 0.11), 0 24px 52px rgba(8, 37, 56, 0.16);
+  }
+  48% {
+    transform: translateY(2px) scale(0.985);
+    box-shadow: 0 0 0 16px rgba(217, 119, 6, 0.05), 0 22px 48px rgba(8, 37, 56, 0.14);
+  }
+  68% {
+    transform: translateY(-4px) scale(1.022);
+    box-shadow: 0 0 0 6px rgba(217, 119, 6, 0.04), 0 20px 44px rgba(8, 37, 56, 0.13);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.0), 0 18px 42px rgba(8, 37, 56, 0.12);
+  }
+}
+
+@keyframes ownerSpaceFlashOccupied {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(185, 28, 28, 0.0), 0 18px 42px rgba(8, 37, 56, 0.12);
+  }
+  24% {
+    transform: translateY(-10px) scale(1.06);
+    box-shadow: 0 0 0 10px rgba(185, 28, 28, 0.11), 0 24px 52px rgba(8, 37, 56, 0.16);
+  }
+  48% {
+    transform: translateY(2px) scale(0.985);
+    box-shadow: 0 0 0 16px rgba(185, 28, 28, 0.05), 0 22px 48px rgba(8, 37, 56, 0.14);
+  }
+  68% {
+    transform: translateY(-4px) scale(1.022);
+    box-shadow: 0 0 0 6px rgba(185, 28, 28, 0.04), 0 20px 44px rgba(8, 37, 56, 0.13);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 0 rgba(185, 28, 28, 0.0), 0 18px 42px rgba(8, 37, 56, 0.12);
+  }
+}
+
+.owner-main-screen__space-card--updated-available {
+  animation-name: ownerSpaceEnter, ownerSpaceFlashAvailable;
+}
+
+.owner-main-screen__space-card--updated-reserved {
+  animation-name: ownerSpaceEnter, ownerSpaceFlashReserved;
+}
+
+.owner-main-screen__space-card--updated-occupied {
+  animation-name: ownerSpaceEnter, ownerSpaceFlashOccupied;
 }
 
 .owner-main-screen__space-card--reserved {
@@ -254,6 +466,28 @@
   margin: 0;
   color: #245f84;
   font-size: 0.9rem;
+}
+
+.owner-main-screen__occupied-release-button {
+  margin-top: 12px;
+  border: none;
+  border-radius: 14px;
+  padding: 11px 14px;
+  background: linear-gradient(135deg, rgba(185, 28, 28, 0.92), rgba(220, 38, 38, 0.96));
+  color: #fff7f7;
+  cursor: pointer;
+  font-weight: 800;
+  box-shadow: 0 10px 22px rgba(185, 28, 28, 0.22);
+}
+
+.owner-main-screen__occupied-release-button:hover:not(:disabled) {
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+}
+
+.owner-main-screen__occupied-release-button:disabled {
+  opacity: 0.68;
+  cursor: wait;
 }
 
 .owner-main-screen__space-actions button {

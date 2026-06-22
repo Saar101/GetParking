@@ -13,5 +13,5 @@ app.use('/api', recommendationRouter);
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
-const port = process.env.PORT || 5174;
+const port = process.env.PARKING_API_PORT || process.env.PORT || 5175;
 app.listen(port, () => console.log(`Server listening on ${port}`));

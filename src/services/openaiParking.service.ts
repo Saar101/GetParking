@@ -43,7 +43,38 @@ export type ParkingFollowupResult = {
   reply: string;
 };
 
-const API_BASE = import.meta.env.VITE_PARKING_API_BASE_URL ?? "http://localhost:5174";
+const API_BASE = (import.meta.env.VITE_PARKING_API_BASE_URL ?? "").replace(/\/$/, "");
+
+const API_FALLBACK_BASES = ["", "http://localhost:5174", "http://localhost:5175"];
+
+function buildApiBaseCandidates() {
+  const candidates = API_BASE ? [API_BASE, ...API_FALLBACK_BASES] : API_FALLBACK_BASES;
+  return Array.from(new Set(candidates));
+}
+
+async function fetchWithApiFallback(path: string, init: RequestInit) {
+  const bases = buildApiBaseCandidates();
+  let lastError: unknown = null;
+
+  for (const base of bases) {
+    const targetUrl = `${base}${path}`;
+
+    try {
+      const response = await fetch(targetUrl, init);
+
+      if (response.status === 404 && base !== bases[bases.length - 1]) {
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      continue;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("לא הצלחתי להגיע לשרת ההמלצות");
+}
 
 function logParkingApi(message: string, details?: unknown) {
   if (details !== undefined) {
@@ -74,7 +105,7 @@ export async function requestParkingRecommendation(
       selectedLotId: payload.selectedLotId ?? null,
     });
 
-    const response = await fetch(`${API_BASE}/api/parking-recommendation`, {
+    const response = await fetchWithApiFallback(`/api/parking-recommendation`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -141,7 +172,7 @@ export async function requestParkingFollowup(
       messageCount: payload.messages.length,
     });
 
-    const response = await fetch(`${API_BASE}/api/parking-recommendation-followup`, {
+    const response = await fetchWithApiFallback(`/api/parking-recommendation-followup`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

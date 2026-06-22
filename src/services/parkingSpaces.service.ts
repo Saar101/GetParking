@@ -50,6 +50,10 @@ export type UserBookingRow = {
   historyOutcome: "cancelled" | "ended" | null;
 };
 
+type ParkingLotDoc = {
+  ownerId?: number | null;
+};
+
 type UserDoc = {
   userId: number;
   name: string;
@@ -57,6 +61,7 @@ type UserDoc = {
   bookingHistory?: string[];
   bookingHistoryDetails?: Record<string, BookingHistorySnapshot>;
   parkingLotId?: string | null; // לבעל חניון
+  parkingLotIds?: string[] | null;
   parkingSpaceId?: string | null; // ללקוח (לא חובה כאן)
   createdAt?: any;
 };
@@ -388,9 +393,15 @@ export async function setSpaceStatusByOwnerOrAdmin(
 
     const space = spaceSnap.data() as ParkingSpaceDoc;
     const actor = actorSnap.data() as UserDoc;
+    const lotSnap = await tx.get(doc(db, "parkingLots", space.parkingLotId));
+    const lot = lotSnap.exists() ? (lotSnap.data() as ParkingLotDoc) : null;
 
     const isAdmin = actor.role === "admin";
-    const ownsLot = actor.role === "owner" && actor.parkingLotId === space.parkingLotId;
+    const ownsLotByLotOwner = actor.role === "owner" && lot?.ownerId === actor.userId;
+    const ownsLotByPrimaryLot = actor.role === "owner" && actor.parkingLotId === space.parkingLotId;
+    const ownsLotByAssignedLots =
+      actor.role === "owner" && Array.isArray(actor.parkingLotIds) && actor.parkingLotIds.includes(space.parkingLotId);
+    const ownsLot = ownsLotByLotOwner || ownsLotByPrimaryLot || ownsLotByAssignedLots;
 
     if (!isAdmin && !ownsLot) {
       throw new Error("Not allowed: only owner of this lot or admin can edit space status");

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import appTitleLogo from "../../assets/ChatGPT Image Jan 26, 2026, 08_22_00 PM.png";
 import homeBackgroundImage from "../../assets/home-background.png";
 import { listParkingLots } from "../../services/parkingLots.service";
@@ -37,6 +37,10 @@ type OccupiedCustomerView = {
   phoneNumber: string | null;
   licensePlate: string | null;
   customerId: number | null;
+};
+
+type SpaceViewWithEffectiveStatus = SpaceView & {
+  effectiveStatus: SpaceStatus;
 };
 
 function countByStatus(spaces: SpaceView[], status: SpaceStatus) {
@@ -106,6 +110,45 @@ function formatDurationHours(durationHours: number | null | undefined) {
   return `${durationHours} שעות`;
 }
 
+function getReservationTimeStatus(space: SpaceView) {
+  if (space.status !== "reserved" || !space.reservation?.reservedFrom || !space.reservation?.reservedUntil) {
+    return space.status;
+  }
+
+  const now = Date.now();
+  const reservedFromTime = new Date(space.reservation.reservedFrom).getTime();
+  const reservedUntilTime = new Date(space.reservation.reservedUntil).getTime();
+
+  if (Number.isNaN(reservedFromTime) || Number.isNaN(reservedUntilTime)) {
+    return space.status;
+  }
+
+  if (reservedFromTime <= now && reservedUntilTime >= now) {
+    return "occupied";
+  }
+
+  return space.status;
+}
+
+function enrichSpacesWithEffectiveStatus(spaces: SpaceView[]) {
+  return spaces.map((space) => ({
+    ...space,
+    effectiveStatus: getReservationTimeStatus(space),
+  }));
+}
+
+function summarizeLotFromSpaces(lot: OwnedLotView, spaces: SpaceView[]) {
+  const lotSpaces = spaces.filter((space) => space.parkingLotId === lot.id);
+
+  return {
+    ...lot,
+    totalSpaces: lotSpaces.length,
+    availableSpaces: lotSpaces.filter((space) => getReservationTimeStatus(space) === "available").length,
+    reservedSpaces: lotSpaces.filter((space) => getReservationTimeStatus(space) === "reserved").length,
+    occupiedSpaces: lotSpaces.filter((space) => getReservationTimeStatus(space) === "occupied").length,
+  };
+}
+
 export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -116,6 +159,10 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
   const [selectedReservationSpaceId, setSelectedReservationSpaceId] = useState<string | null>(null);
   const [savingSpaceId, setSavingSpaceId] = useState<string | null>(null);
   const [activePage, setActivePage] = useState<'dashboard' | 'lots' | 'spaces' | 'alerts' | 'logout'>('dashboard');
+  const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
+  const [recentlyUpdatedSpaceId, setRecentlyUpdatedSpaceId] = useState<string | null>(null);
+  const [recentlyUpdatedSpaceStatus, setRecentlyUpdatedSpaceStatus] = useState<SpaceStatus | null>(null);
+  const recentlyUpdatedSpaceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const buildCustomerLookup = (users: UserListItem[]) => {
     const lookup = new Map<string, OccupiedCustomerView>();
@@ -159,14 +206,21 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
 
       setOwnerUser(currentUser ?? null);
 
+      const ownedLotIdList = new Set<string>([
+        ...(Array.isArray(currentUser?.parkingLotIds) ? currentUser.parkingLotIds : []),
+        ...(currentUser?.parkingLotId ? [currentUser.parkingLotId] : []),
+      ]);
+
       const ownedLotIds = new Set(
         lots
-          .filter((lot) => lot.ownerId === currentUser?.userId || lot.id === currentUser?.parkingLotId)
+          .filter((lot) => lot.ownerId === currentUser?.userId || ownedLotIdList.has(lot.id))
           .map((lot) => lot.id)
       );
 
       const filteredLots = lots.filter((lot) => ownedLotIds.has(lot.id));
-      const filteredSpaces = spaces.filter((space) => ownedLotIds.has(space.parkingLotId));
+      const filteredSpaces = enrichSpacesWithEffectiveStatus(
+        spaces.filter((space) => ownedLotIds.has(space.parkingLotId))
+      );
       const customerLookup = buildCustomerLookup(users);
 
       setOwnedLots(
@@ -178,9 +232,9 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
             name: lot.name,
             address: lot.address,
             totalSpaces: lotSpaces.length,
-            availableSpaces: countByStatus(lotSpaces, "available"),
-            reservedSpaces: countByStatus(lotSpaces, "reserved"),
-            occupiedSpaces: countByStatus(lotSpaces, "occupied"),
+            availableSpaces: lotSpaces.filter((space) => space.effectiveStatus === "available").length,
+            reservedSpaces: lotSpaces.filter((space) => space.effectiveStatus === "reserved").length,
+            occupiedSpaces: lotSpaces.filter((space) => space.effectiveStatus === "occupied").length,
           };
         })
       );
@@ -188,7 +242,7 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
       setOwnedSpaces(filteredSpaces.sort((left, right) => left.id.localeCompare(right.id)));
       setOccupiedCustomerBySpaceId(
         filteredSpaces.reduce<Record<string, OccupiedCustomerView | null>>((accumulator, space) => {
-          if (space.status === "available") {
+          if (space.effectiveStatus === "available") {
             accumulator[space.id] = null;
             return accumulator;
           }
@@ -221,19 +275,84 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
     void loadOwnerData();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (recentlyUpdatedSpaceTimerRef.current) {
+        clearTimeout(recentlyUpdatedSpaceTimerRef.current);
+      }
+    };
+  }, []);
+
+  const displayedSpaces = useMemo(() => {
+    return selectedLotId ? ownedSpaces.filter((s) => s.parkingLotId === selectedLotId) : ownedSpaces;
+  }, [ownedSpaces, selectedLotId]);
+
   const totals = useMemo(() => {
     return {
       lots: ownedLots.length,
-      spaces: ownedSpaces.length,
-      available: countByStatus(ownedSpaces, "available"),
-      reserved: countByStatus(ownedSpaces, "reserved"),
-      occupied: countByStatus(ownedSpaces, "occupied"),
+      spaces: displayedSpaces.length,
+      available: displayedSpaces.filter((space) => getReservationTimeStatus(space) === "available").length,
+      reserved: displayedSpaces.filter((space) => getReservationTimeStatus(space) === "reserved").length,
+      occupied: displayedSpaces.filter((space) => getReservationTimeStatus(space) === "occupied").length,
     };
-  }, [ownedLots.length, ownedSpaces]);
+  }, [ownedLots.length, displayedSpaces]);
 
   const lotNameById = useMemo(() => {
     return new Map(ownedLots.map((lot) => [lot.id, lot.name] as const));
   }, [ownedLots]);
+
+  const updateSpaceLocally = (
+    spaceId: string,
+    patch: Partial<SpaceView>,
+    options?: { clearOccupiedCustomer?: boolean; clearReservationSelection?: boolean }
+  ) => {
+    const clearOccupiedCustomer = options?.clearOccupiedCustomer ?? false;
+    const clearReservationSelection = options?.clearReservationSelection ?? false;
+
+    setOwnedSpaces((previousSpaces) => {
+      const currentSpace = previousSpaces.find((space) => space.id === spaceId);
+
+      if (!currentSpace) {
+        return previousSpaces;
+      }
+
+      const updatedSpaces = previousSpaces.map((space) =>
+        space.id === spaceId ? { ...space, ...patch } : space
+      );
+
+      setOwnedLots((previousLots) =>
+        previousLots.map((lot) =>
+          lot.id === currentSpace.parkingLotId ? summarizeLotFromSpaces(lot, updatedSpaces) : lot
+        )
+      );
+
+      if (clearOccupiedCustomer || patch.status === "available" || patch.status === "reserved") {
+        setOccupiedCustomerBySpaceId((previousMap) => ({
+          ...previousMap,
+          [spaceId]: null,
+        }));
+      }
+
+      if (clearReservationSelection) {
+        setSelectedReservationSpaceId((currentSelectedSpaceId) =>
+          currentSelectedSpaceId === spaceId ? null : currentSelectedSpaceId
+        );
+      }
+
+      if (recentlyUpdatedSpaceTimerRef.current) {
+        clearTimeout(recentlyUpdatedSpaceTimerRef.current);
+      }
+
+      setRecentlyUpdatedSpaceId(spaceId);
+      setRecentlyUpdatedSpaceStatus((patch.status ?? currentSpace.status) as SpaceStatus);
+      recentlyUpdatedSpaceTimerRef.current = setTimeout(() => {
+        setRecentlyUpdatedSpaceId((currentSpaceId) => (currentSpaceId === spaceId ? null : currentSpaceId));
+        setRecentlyUpdatedSpaceStatus(null);
+      }, 900);
+
+      return updatedSpaces;
+    });
+  };
 
   const updateSpaceStatus = async (spaceId: string, status: SpaceStatus) => {
     setSavingSpaceId(spaceId);
@@ -242,7 +361,11 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
     try {
       const userDocId = await getCurrentBookingUserDocId();
       await setSpaceStatusByOwnerOrAdmin(spaceId, userDocId, status);
-      await loadOwnerData();
+      updateSpaceLocally(spaceId, {
+        status,
+        customerId: status === "occupied" ? ownedSpaces.find((space) => space.id === spaceId)?.customerId ?? null : null,
+        dateTime: new Date().toISOString(),
+      });
     } catch (updateError) {
       const message = updateError instanceof Error ? updateError.message : String(updateError);
       setError(message || "לא הצלחנו לעדכן את מצב החניה.");
@@ -264,11 +387,50 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
       }
 
       await releaseParkingSpaceReservation(spaceId, reservationUserDocId);
-      await loadOwnerData();
+      updateSpaceLocally(
+        spaceId,
+        {
+          status: "available",
+          customerId: null,
+          reservation: null,
+          dateTime: new Date().toISOString(),
+        },
+        { clearOccupiedCustomer: true, clearReservationSelection: true }
+      );
       closeReservationDetails();
     } catch (cancelError) {
       const message = cancelError instanceof Error ? cancelError.message : String(cancelError);
       setError(message || "לא הצלחנו לבטל את ההזמנה.");
+    } finally {
+      setSavingSpaceId(null);
+    }
+  };
+
+  const releaseOccupiedSpace = async (spaceId: string) => {
+    setSavingSpaceId(spaceId);
+    setError("");
+
+    try {
+      const occupiedCustomer = occupiedCustomerBySpaceId[spaceId];
+
+      if (!occupiedCustomer?.docId) {
+        throw new Error("לא נמצא מזהה משתמש לחניה התפוסה הזו.");
+      }
+
+      await releaseParkingSpaceReservation(spaceId, occupiedCustomer.docId);
+      updateSpaceLocally(
+        spaceId,
+        {
+          status: "available",
+          customerId: null,
+          reservation: null,
+          dateTime: new Date().toISOString(),
+        },
+        { clearOccupiedCustomer: true }
+      );
+    } catch (releaseError) {
+      const message = releaseError instanceof Error ? releaseError.message : String(releaseError);
+      setError(message || "לא הצלחנו לשחרר את החנייה.");
     } finally {
       setSavingSpaceId(null);
     }
@@ -283,7 +445,7 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
   };
 
   const selectedReservationSpace = selectedReservationSpaceId
-    ? ownedSpaces.find((space) => space.id === selectedReservationSpaceId) ?? null
+    ? displayedSpaces.find((space) => space.id === selectedReservationSpaceId) ?? null
     : null;
 
   return (
@@ -346,7 +508,18 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
               ) : (
                 <div className="owner-main-screen__lot-list">
                   {ownedLots.map((lot) => (
-                    <article key={lot.id} className="owner-main-screen__lot-card">
+                    <article
+                      key={lot.id}
+                      className={`owner-main-screen__lot-card ${selectedLotId === lot.id ? "owner-main-screen__lot-card--active" : ""}`}
+                      onClick={() => setSelectedLotId((prev) => (prev === lot.id ? null : lot.id))}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          setSelectedLotId((prev) => (prev === lot.id ? null : lot.id));
+                        }
+                      }}
+                    >
                       <div>
                         <h3>{lot.name}</h3>
                         <p>{lot.address}</p>
@@ -364,67 +537,94 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
             </section>
 
             <section className="owner-main-screen__panel">
-              <h2>מקומות לפי חניון</h2>
-              {ownedSpaces.length === 0 ? (
+              <div className="owner-main-screen__panel-header">
+                <h2>מקומות לפי חניון</h2>
+                {selectedLotId ? (
+                  <button
+                    type="button"
+                    className="owner-main-screen__show-all-spaces-button"
+                    onClick={() => setSelectedLotId(null)}
+                  >
+                    הצג חניות של כלל החניונים
+                  </button>
+                ) : null}
+              </div>
+              {displayedSpaces.length === 0 ? (
                 <p className="owner-main-screen__empty">אין מקומות להצגה כרגע.</p>
               ) : (
-                <div className="owner-main-screen__space-grid">
-                  {ownedSpaces.map((space) => (
-                    <article key={space.id} className={`owner-main-screen__space-card owner-main-screen__space-card--${space.status}`}>
-                      <div className="owner-main-screen__space-header">
-                        <strong>{space.id}</strong>
-                        <span>{getSpaceStatusLabel(space.status)}</span>
-                      </div>
-                      <p>חניון: {space.parkingLotId}</p>
-                      {space.status === "reserved" ? (
-                        <button
-                          type="button"
-                          className="owner-main-screen__reservation-toggle"
-                          onClick={() => openReservationDetails(space.id)}
+                <div key={selectedLotId ?? "all-lots"} className="owner-main-screen__space-grid">
+                  {displayedSpaces.map((space, index) => {
+                      const effectiveStatus = getReservationTimeStatus(space);
+
+                      return (
+                        <article
+                          key={space.id}
+                          className={`owner-main-screen__space-card owner-main-screen__space-card--${effectiveStatus} ${recentlyUpdatedSpaceId === space.id ? `owner-main-screen__space-card--updated owner-main-screen__space-card--updated-${recentlyUpdatedSpaceStatus ?? effectiveStatus}` : ""}`}
+                          style={{ ["--space-index" as string]: index } as CSSProperties}
                         >
-                          פרטי הזמנה
-                        </button>
-                      ) : null}
-                      {space.status === "occupied" ? (
-                        <div className="owner-main-screen__occupied-customer">
-                          <span className="owner-main-screen__occupied-customer-label">נתוני הלקוח בחניה</span>
-                          {occupiedCustomerBySpaceId[space.id] ? (
-                            <div className="owner-main-screen__occupied-customer-grid">
-                              <div><span>שם</span><strong>{occupiedCustomerBySpaceId[space.id]?.name ?? "-"}</strong></div>
-                              <div><span>מייל</span><strong>{occupiedCustomerBySpaceId[space.id]?.email ?? "-"}</strong></div>
-                              <div><span>טלפון</span><strong>{occupiedCustomerBySpaceId[space.id]?.phoneNumber ?? "-"}</strong></div>
-                              <div><span>לוחית</span><strong>{occupiedCustomerBySpaceId[space.id]?.licensePlate ?? "-"}</strong></div>
+                          <div className="owner-main-screen__space-header">
+                            <strong>{space.id}</strong>
+                            <span>{getSpaceStatusLabel(effectiveStatus)}</span>
+                          </div>
+                          <p>חניון: {space.parkingLotId}</p>
+                          {effectiveStatus === "reserved" ? (
+                            <button
+                              type="button"
+                              className="owner-main-screen__reservation-toggle"
+                              onClick={() => openReservationDetails(space.id)}
+                            >
+                              פרטי הזמנה
+                            </button>
+                          ) : null}
+                          {effectiveStatus === "occupied" ? (
+                            <div className="owner-main-screen__occupied-customer">
+                              <span className="owner-main-screen__occupied-customer-label">נתוני הלקוח בחניה</span>
+                              {occupiedCustomerBySpaceId[space.id] ? (
+                                <div className="owner-main-screen__occupied-customer-grid">
+                                  <div><span>שם</span><strong>{occupiedCustomerBySpaceId[space.id]?.name ?? "-"}</strong></div>
+                                  <div><span>מייל</span><strong>{occupiedCustomerBySpaceId[space.id]?.email ?? "-"}</strong></div>
+                                  <div><span>טלפון</span><strong>{occupiedCustomerBySpaceId[space.id]?.phoneNumber ?? "-"}</strong></div>
+                                  <div><span>לוחית</span><strong>{occupiedCustomerBySpaceId[space.id]?.licensePlate ?? "-"}</strong></div>
+                                </div>
+                              ) : (
+                                <p className="owner-main-screen__occupied-customer-empty">לא נמצאו נתוני לקוח תואמים כרגע.</p>
+                              )}
+                              <button
+                                type="button"
+                                className="owner-main-screen__occupied-release-button"
+                                onClick={() => void releaseOccupiedSpace(space.id)}
+                                disabled={savingSpaceId === space.id}
+                              >
+                                {savingSpaceId === space.id ? "משחרר..." : "שחרור החנייה"}
+                              </button>
                             </div>
-                          ) : (
-                            <p className="owner-main-screen__occupied-customer-empty">לא נמצאו נתוני לקוח תואמים כרגע.</p>
-                          )}
-                        </div>
-                      ) : null}
-                      <div className="owner-main-screen__space-actions">
-                        <button
-                          type="button"
-                          onClick={() => void updateSpaceStatus(space.id, "available")}
-                          disabled={savingSpaceId === space.id}
-                        >
-                          פנוי
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void updateSpaceStatus(space.id, "reserved")}
-                          disabled={savingSpaceId === space.id}
-                        >
-                          מוזמן
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void updateSpaceStatus(space.id, "occupied")}
-                          disabled={savingSpaceId === space.id}
-                        >
-                          תפוס
-                        </button>
-                      </div>
-                    </article>
-                  ))}
+                          ) : null}
+                          <div className="owner-main-screen__space-actions">
+                            <button
+                              type="button"
+                              onClick={() => void updateSpaceStatus(space.id, "available")}
+                              disabled={savingSpaceId === space.id}
+                            >
+                              פנוי
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void updateSpaceStatus(space.id, "reserved")}
+                              disabled={savingSpaceId === space.id}
+                            >
+                              מוזמן
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void updateSpaceStatus(space.id, "occupied")}
+                              disabled={savingSpaceId === space.id}
+                            >
+                              תפוס
+                            </button>
+                          </div>
+                        </article>
+                      );
+                  })}
                 </div>
               )}
             </section>

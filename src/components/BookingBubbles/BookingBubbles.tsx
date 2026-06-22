@@ -159,7 +159,7 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
 
     const intervalId = window.setInterval(() => {
       void load();
-    }, 60000);
+    }, 5000);
 
     return () => {
       mounted = false;

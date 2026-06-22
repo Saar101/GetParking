@@ -25,7 +25,7 @@ export async function seedGetParkingData() {
       name: "חניון דיזנגוף",
       address: "דיזנגוף 99, תל אביב",
       location: { lat: 32.0830, lng: 34.7700 },
-      ownerId: 202,
+      ownerId: 201,
     },
     {
       id: "L03",
@@ -60,7 +60,7 @@ export async function seedGetParkingData() {
   const users = [
     { id: "101", name: "Saar", role: "customer", parkingLotId: null },
     { id: "102", name: "Nir", role: "customer", parkingLotId: null },
-    { id: "201", name: "David", role: "owner", parkingLotId: "L01" },
+    { id: "201", name: "Saar Nir", role: "owner", parkingLotId: "L01", parkingLotIds: ["L01", "L02", "L03"] },
     { id: "202", name: "Rachel", role: "owner", parkingLotId: "L02" },
     { id: "1", name: "Admin", role: "admin", parkingLotId: null },
   ];
@@ -75,6 +75,7 @@ export async function seedGetParkingData() {
         role: user.role,
         bookingHistory: [],
         parkingLotId: user.parkingLotId,
+        parkingLotIds: user.parkingLotIds ?? [user.parkingLotId].filter(Boolean),
         parkingSpaceId: null,
         createdAt: serverTimestamp(),
       },

@@ -53,6 +53,7 @@ export type CustomerFields = {
 
 export type OwnerFields = {
   parkingLotId: string;
+  parkingLotIds?: string[];
 };
 
 export type UserDoc = UserBase & Partial<CustomerFields & OwnerFields>;
