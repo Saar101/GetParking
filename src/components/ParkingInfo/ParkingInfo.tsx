@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import ParkingReservation, { type ReservationData } from '../ParkingReservation';
 import ParkingApproved from '../ParkingApproved/ParkingApproved';
+import { recordParkingLotCardCheck } from '../../services/parkingLots.service';
 import {
   releaseParkingSpaceReservation,
   reserveFirstAvailableParkingSpaceForCustomer,
@@ -87,6 +88,16 @@ export default function ParkingInfo({
     setShowNoAvailability(false);
     setReservedSpaceId(null);
     setReservedByUserDocId(null);
+  }, [isOpen, parkingSpace?.id]);
+
+  useEffect(() => {
+    if (!isOpen || !parkingSpace?.id) {
+      return;
+    }
+
+    void recordParkingLotCardCheck(parkingSpace.id).catch((error) => {
+      console.error('שגיאה בעדכון כניסה לכרטיס החניון:', error);
+    });
   }, [isOpen, parkingSpace?.id]);
 
   if (!isOpen || !parkingSpace) return null;

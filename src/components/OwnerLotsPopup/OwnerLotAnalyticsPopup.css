@@ -1,0 +1,218 @@
+.owner-lot-analytics-popup__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(5, 18, 28, 0.58);
+  backdrop-filter: blur(12px);
+  animation: ownerLotAnalyticsOverlayIn 180ms ease-out;
+}
+
+.owner-lot-analytics-popup {
+  width: min(1440px, 97vw);
+  max-height: min(92vh, 980px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 16px;
+  padding: 22px;
+  overflow: hidden;
+  border-radius: 30px;
+  direction: rtl;
+  border: 1px solid rgba(8, 80, 120, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(244, 250, 255, 0.99) 100%);
+  box-shadow: 0 42px 120px rgba(8, 37, 56, 0.36);
+  animation: ownerLotAnalyticsPopupIn 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.owner-lot-analytics-popup__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.owner-lot-analytics-popup__header > div {
+  text-align: right;
+}
+
+.owner-lot-analytics-popup__eyebrow {
+  margin: 0 0 6px;
+  color: #0a79b3;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.owner-lot-analytics-popup__header h2 {
+  margin: 0 0 6px;
+  color: #09344f;
+  font-size: 1.8rem;
+  text-align: right;
+}
+
+.owner-lot-analytics-popup__subtitle {
+  margin: 0;
+  color: #245f84;
+  line-height: 1.8;
+  text-align: right;
+}
+
+.owner-lot-analytics-popup__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.owner-lot-analytics-popup__back,
+.owner-lot-analytics-popup__close {
+  border: none;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease, background 0.18s ease;
+}
+
+.owner-lot-analytics-popup__back {
+  border-radius: 999px;
+  padding: 11px 16px;
+  background: linear-gradient(135deg, rgba(10, 121, 179, 0.12) 0%, rgba(69, 179, 255, 0.16) 100%);
+  color: #0a4970;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(8, 80, 120, 0.08);
+}
+
+.owner-lot-analytics-popup__back:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+  box-shadow: 0 14px 24px rgba(8, 80, 120, 0.14);
+}
+
+.owner-lot-analytics-popup__close {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(10, 121, 179, 0.12);
+  color: #08507a;
+  font-size: 1.05rem;
+}
+
+.owner-lot-analytics-popup__close:hover {
+  transform: scale(1.06);
+  background: rgba(10, 121, 179, 0.18);
+  box-shadow: 0 8px 16px rgba(8, 80, 120, 0.16);
+}
+
+.owner-lot-analytics-popup__meta-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(10, 121, 179, 0.06);
+  border: 1px solid rgba(10, 121, 179, 0.12);
+  color: #0a4970;
+  font-weight: 700;
+}
+
+.owner-lot-analytics-popup__meta-bar span {
+  padding-inline-end: 10px;
+}
+
+.owner-lot-analytics-popup__meta-bar span:not(:last-child) {
+  border-inline-end: 1px solid rgba(10, 121, 179, 0.18);
+}
+
+.owner-lot-analytics-popup__body {
+  min-height: 0;
+  align-self: stretch;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-inline-end: 8px;
+  padding-bottom: 4px;
+  overscroll-behavior: contain;
+}
+
+.owner-lot-analytics-popup__body .owner-lot-analytics {
+  display: grid;
+  gap: 16px;
+  min-height: 0;
+}
+
+.owner-lot-analytics-popup__body .owner-lot-analytics__topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.owner-lot-analytics-popup__body .owner-lot-analytics__chart-grid {
+  display: grid;
+  column-gap: 40px;
+  row-gap: 24px;
+  grid-template-columns: repeat(3, minmax(280px, 360px));
+  justify-content: start;
+}
+
+@media (max-width: 1240px) {
+  .owner-lot-analytics-popup__body .owner-lot-analytics__chart-grid {
+    grid-template-columns: repeat(2, minmax(320px, 420px));
+  }
+}
+
+.owner-lot-analytics-popup__body .owner-lot-analytics__chart-card,
+.owner-lot-analytics-popup__body .owner-lot-analytics__metric-card {
+  min-width: 0;
+}
+
+.owner-lot-analytics-popup__body .owner-lot-analytics__chart {
+  max-width: 100%;
+  overflow: hidden;
+}
+
+@keyframes ownerLotAnalyticsOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ownerLotAnalyticsPopupIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 900px) {
+  .owner-lot-analytics-popup {
+    padding: 16px;
+    border-radius: 22px;
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+
+  .owner-lot-analytics-popup__header,
+  .owner-lot-analytics-popup__body .owner-lot-analytics__topbar {
+    flex-direction: column;
+  }
+
+  .owner-lot-analytics-popup__actions {
+    align-self: flex-start;
+  }
+
+  .owner-lot-analytics-popup__body {
+    max-height: calc(92vh - 200px);
+  }
+
+  .owner-lot-analytics-popup__body .owner-lot-analytics__chart-grid {
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+  }
+}

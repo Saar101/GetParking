@@ -47,6 +47,7 @@ export async function seedGetParkingData() {
         location: lot.location,
         demandScore: Math.floor(Math.random() * 10),
         recommendationCount: 0,
+        cardChecksCount: 0,
         basePrice: Math.floor(Math.random() * 30) + 15,
         salePrice: null,
         ownerId: lot.ownerId,

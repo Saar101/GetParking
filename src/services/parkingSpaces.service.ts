@@ -8,6 +8,8 @@ import {
   updateDoc,
   runTransaction,
   arrayUnion,
+  onSnapshot,
+  query,
 } from "firebase/firestore";
 import { getCurrentBookingUserDocId, type BookingHistorySnapshot } from "./users.service";
 
@@ -599,4 +601,60 @@ export async function listUserBookings(userDocId?: string): Promise<UserBookingR
   });
 
   return rows;
+}
+
+/**
+ * Subscribe to real-time updates for parking spaces
+ * Useful for owner dashboard to see reservation changes in real-time
+ */
+export function subscribeToRealtimeParkingSpaces(
+  onUpdate: (spaces: ParkingSpaceDoc[]) => void,
+  onError?: (error: Error) => void
+): () => void {
+  const unsubscribe = onSnapshot(
+    query(collection(db, spacesCol)),
+    (snapshot) => {
+      const spaces: ParkingSpaceDoc[] = [];
+      snapshot.docs.forEach((doc) => {
+        if (doc.exists()) {
+          spaces.push({ id: doc.id, ...doc.data() } as ParkingSpaceDoc);
+        }
+      });
+      onUpdate(spaces);
+    },
+    (error) => {
+      console.error("Error subscribing to parking spaces:", error);
+      onError?.(error as Error);
+    }
+  );
+
+  return unsubscribe;
+}
+
+/**
+ * Subscribe to real-time updates for parking lots
+ * Useful for owner dashboard to see lot stats changes
+ */
+export function subscribeToRealtimeParkingLots(
+  onUpdate: (lots: Array<{ id: string; [key: string]: any }>) => void,
+  onError?: (error: Error) => void
+): () => void {
+  const unsubscribe = onSnapshot(
+    query(collection(db, "parkingLots")),
+    (snapshot) => {
+      const lots: Array<{ id: string; [key: string]: any }> = [];
+      snapshot.docs.forEach((doc) => {
+        if (doc.exists()) {
+          lots.push({ id: doc.id, ...doc.data() });
+        }
+      });
+      onUpdate(lots);
+    },
+    (error) => {
+      console.error("Error subscribing to parking lots:", error);
+      onError?.(error as Error);
+    }
+  );
+
+  return unsubscribe;
 }

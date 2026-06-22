@@ -10,6 +10,8 @@ import {
   type ParkingSpaceDoc,
   type SpaceStatus,
 } from "../../services/parkingSpaces.service";
+import OwnerLotsPopup from "../OwnerLotsPopup";
+import OwnerLotAnalyticsPopup from "../OwnerLotsPopup/OwnerLotAnalyticsPopup";
 import OwnerSideBar from "../OwnerSideBar/OwnerSideBar";
 import "./OwnerMainScreen.css";
 
@@ -26,6 +28,11 @@ type OwnedLotView = {
   availableSpaces: number;
   reservedSpaces: number;
   occupiedSpaces: number;
+  demandScore: number;
+  recommendationCount: number;
+  recommendationHistoryByHour?: Record<string, number>;
+  cardChecksCount?: number;
+  cardChecksHistoryByHour?: Record<string, number>;
 };
 
 type SpaceView = ParkingSpaceDoc & { id: string };
@@ -163,6 +170,8 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
   const [recentlyUpdatedSpaceId, setRecentlyUpdatedSpaceId] = useState<string | null>(null);
   const [recentlyUpdatedSpaceStatus, setRecentlyUpdatedSpaceStatus] = useState<SpaceStatus | null>(null);
   const recentlyUpdatedSpaceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLotsPopupOpen = activePage === "lots";
+  const [selectedAnalyticsLot, setSelectedAnalyticsLot] = useState<OwnedLotView | null>(null);
 
   const buildCustomerLookup = (users: UserListItem[]) => {
     const lookup = new Map<string, OccupiedCustomerView>();
@@ -235,6 +244,11 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
             availableSpaces: lotSpaces.filter((space) => space.effectiveStatus === "available").length,
             reservedSpaces: lotSpaces.filter((space) => space.effectiveStatus === "reserved").length,
             occupiedSpaces: lotSpaces.filter((space) => space.effectiveStatus === "occupied").length,
+            demandScore: lot.demandScore,
+            recommendationCount: lot.recommendationCount ?? 0,
+            recommendationHistoryByHour: lot.recommendationHistoryByHour ?? {},
+            cardChecksCount: lot.cardChecksCount ?? 0,
+            cardChecksHistoryByHour: lot.cardChecksHistoryByHour ?? {},
           };
         })
       );
@@ -444,6 +458,31 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
     setSelectedReservationSpaceId(null);
   };
 
+  const closeLotsPopup = () => {
+    setActivePage("dashboard");
+  };
+
+  const openLotAnalyticsPopup = (lot: OwnedLotView) => {
+    setSelectedLotId(lot.id);
+    setSelectedAnalyticsLot(lot);
+    setActivePage("dashboard");
+  };
+
+  const closeLotAnalyticsPopup = () => {
+    setSelectedAnalyticsLot(null);
+  };
+
+  const goBackToLotsPopup = () => {
+    setSelectedAnalyticsLot(null);
+    setActivePage("lots");
+  };
+
+  const showAllSpaces = () => {
+    setSelectedLotId(null);
+    setSelectedAnalyticsLot(null);
+    setActivePage("dashboard");
+  };
+
   const selectedReservationSpace = selectedReservationSpaceId
     ? displayedSpaces.find((space) => space.id === selectedReservationSpaceId) ?? null
     : null;
@@ -635,6 +674,22 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
           <span>תפקיד נוכחי: {ownerUser?.role ?? "owner"}</span>
         </footer>
       </div>
+
+      <OwnerLotsPopup
+        isOpen={isLotsPopupOpen}
+        lots={ownedLots}
+        selectedLotId={selectedLotId}
+        onClose={closeLotsPopup}
+        onOpenLotDetails={openLotAnalyticsPopup}
+        onShowAll={showAllSpaces}
+      />
+
+      <OwnerLotAnalyticsPopup
+        isOpen={selectedAnalyticsLot !== null}
+        lot={selectedAnalyticsLot}
+        onClose={closeLotAnalyticsPopup}
+        onBackToLots={goBackToLotsPopup}
+      />
 
       {selectedReservationSpace ? (
         <div className="owner-main-screen__modal-overlay" role="presentation" onClick={closeReservationDetails}>
