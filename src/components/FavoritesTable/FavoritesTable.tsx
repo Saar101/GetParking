@@ -4,7 +4,7 @@ import {
   getCurrentFavoriteParkingLotIds,
   removeCurrentUserFavoriteParkingLot,
 } from "../../services/users.service";
-import { listParkingLots, type ParkingLotDoc } from "../../services/parkingLots.service";
+import { getEffectiveLotPricing, listParkingLots, type ParkingLotDoc } from "../../services/parkingLots.service";
 import "./FavoritesTable.css";
 
 type FavoritesTableProps = {
@@ -16,6 +16,7 @@ type FavoriteParkingCard = {
   id: string;
   address: string;
   price: number;
+  pricingLabel: string;
   distance: string;
   rating: number;
   recommendationCount: number;
@@ -32,11 +33,13 @@ function distanceLabel(recommendationCount: number) {
 function toFavoriteParkingCard(lot: ParkingLotMarker): FavoriteParkingCard {
   const recommendationCount = Math.max(0, lot.recommendationCount ?? 0);
   const rating = Math.min(5, Math.max(1, 1 + recommendationCount / 8));
+  const effectivePricing = getEffectiveLotPricing(lot);
 
   return {
     id: lot.id,
     address: `${lot.name} • ${lot.address}`,
-    price: lot.salePrice ?? lot.basePrice,
+    price: effectivePricing.price,
+    pricingLabel: effectivePricing.label,
     distance: distanceLabel(recommendationCount),
     rating,
     recommendationCount,
@@ -171,7 +174,7 @@ export default function FavoritesTable({ isOpen, onClose }: FavoritesTableProps)
                       <p className="favorites-card__eyebrow">מועדף</p>
                       <h3>{lot.address}</h3>
                     </div>
-                    <span className="favorites-card__price">₪{lot.price}/שעה</span>
+                    <span className="favorites-card__price">₪{lot.price} {lot.pricingLabel}</span>
                   </div>
 
                   <div className="favorites-card__meta">

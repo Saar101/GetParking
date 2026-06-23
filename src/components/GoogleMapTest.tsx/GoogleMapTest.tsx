@@ -1,6 +1,17 @@
 import { useEffect, useState, useRef } from "react";
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps";
-import { addParkingLotRecommendation, listParkingLots, type ParkingLotDoc } from "../../services/parkingLots.service";
+import {
+  addParkingLotRecommendation,
+  getActiveSalePrice,
+  getActiveSalePricingTiers,
+  getBasePricingTiers,
+  getEffectiveLotPricing,
+  getPricingDurationLabel,
+  getPricingTierLabel,
+  listParkingLots,
+  type ParkingPriceTier,
+  type ParkingLotDoc,
+} from "../../services/parkingLots.service";
 import { addCurrentUserFavoriteParkingLot, getCurrentUserSettings } from "../../services/users.service";
 import ChatConsultation from "../ChatConsultation/ChatConsultation";
 import ParkingInfo from "../ParkingInfo/ParkingInfo";
@@ -19,6 +30,12 @@ type ParkingInfoCard = {
   id: string;
   address: string;
   price: number;
+  pricingLabel: string;
+  pricingRanges: Array<{ text: string; isSale?: boolean; originalText?: string }>;
+  pricingRangesTitle: string;
+  originalPriceText?: string;
+  salePriceText?: string;
+  hasActiveSale?: boolean;
   distance: string;
   rating: number;
   recommendationCount: number;
@@ -55,6 +72,71 @@ function distanceMeters(a: LatLng, b: LatLng) {
   return 2 * earthRadius * Math.asin(Math.sqrt(haversine));
 }
 
+function getTierDurationMinutes(tier: Pick<ParkingPriceTier, "durationUnit" | "durationValue">) {
+  if (tier.durationUnit === "day") {
+    return 24 * 60;
+  }
+
+  if (tier.durationUnit === "hours") {
+    return tier.durationValue * 60;
+  }
+
+  return tier.durationValue;
+}
+
+function getTierKey(tier: Pick<ParkingPriceTier, "durationUnit" | "durationValue">) {
+  return `${tier.durationUnit}:${tier.durationValue}`;
+}
+
+function buildDisplayedPricingRanges(basePricingTiers: ParkingPriceTier[], activeSalePricingTiers: ParkingPriceTier[]) {
+  const saleTierByKey = new globalThis.Map(activeSalePricingTiers.map((tier) => [getTierKey(tier), tier]));
+  const highlightedSaleTierKey = activeSalePricingTiers[0] ? getTierKey(activeSalePricingTiers[0]) : null;
+  const mergedTiers = basePricingTiers.map((tier) => {
+    const matchingSaleTier = saleTierByKey.get(getTierKey(tier));
+
+    if (matchingSaleTier) {
+      saleTierByKey.delete(getTierKey(tier));
+      return {
+        text: `₪${matchingSaleTier.price} ${getPricingTierLabel(matchingSaleTier)}`,
+        originalText: `₪${tier.price} ${getPricingTierLabel(tier)}`,
+        isSale: true,
+        durationMinutes: getTierDurationMinutes(matchingSaleTier),
+      };
+    }
+
+    return {
+      text: `₪${tier.price} ${getPricingTierLabel(tier)}`,
+      isSale: false,
+      durationMinutes: getTierDurationMinutes(tier),
+    };
+  });
+
+  for (const saleTier of saleTierByKey.values()) {
+    mergedTiers.push({
+      text: `₪${saleTier.price} ${getPricingTierLabel(saleTier)}`,
+      originalText: undefined,
+      isSale: true,
+      durationMinutes: getTierDurationMinutes(saleTier),
+    });
+  }
+
+  return mergedTiers
+    .sort((left, right) => left.durationMinutes - right.durationMinutes)
+    .filter(({ isSale, text }) => {
+      if (!highlightedSaleTierKey || !isSale) {
+        return true;
+      }
+
+      const highlightedTier = activeSalePricingTiers[0];
+      if (!highlightedTier) {
+        return true;
+      }
+
+      return text !== `₪${highlightedTier.price} ${getPricingTierLabel(highlightedTier)}`;
+    })
+    .map(({ text, isSale, originalText }) => ({ text, isSale, originalText }));
+}
+
 function toParkingInfoCard(
   lot: ParkingLotMarker,
   center: LatLng | null,
@@ -70,10 +152,23 @@ function toParkingInfoCard(
     ? 1 + (recommendationCount / maxRecommendations) * 4
     : 1;
 
+  const effectivePricing = getEffectiveLotPricing(lot);
+  const basePricingTiers = getBasePricingTiers(lot);
+  const activeSalePricingTiers = getActiveSalePricingTiers(lot);
+  const displayedPricingRanges = buildDisplayedPricingRanges(basePricingTiers, activeSalePricingTiers);
+  const primaryBaseTier = basePricingTiers[0];
+  const primarySaleTier = activeSalePricingTiers[0];
+
   return {
     id: lot.id,
     address: `${lot.name} • ${lot.address}`,
-    price: lot.salePrice ?? lot.basePrice,
+    price: effectivePricing.price,
+    pricingLabel: effectivePricing.label,
+    pricingRangesTitle: activeSalePricingTiers.length > 0 ? "מחירי מבצע לפי זמן" : "מחירים לפי זמן",
+    pricingRanges: displayedPricingRanges,
+    originalPriceText: primaryBaseTier ? `₪${primaryBaseTier.price} ${getPricingTierLabel(primaryBaseTier)}` : undefined,
+    salePriceText: primarySaleTier ? `₪${primarySaleTier.price} ${getPricingTierLabel(primarySaleTier)}` : undefined,
+    hasActiveSale: activeSalePricingTiers.length > 0,
     distance: `${Math.round(distance)} מ' מהמיקום שנבחר`,
     rating: Math.min(5, Math.max(1, rating)),
     recommendationCount,
@@ -288,7 +383,7 @@ function MapContent({
             <div className="gmt-parking-lot-tooltip">
               <strong>{lot.name}</strong>
               <span>{lot.address}</span>
-              <span>₪{lot.salePrice ?? lot.basePrice}/שעה</span>
+              <span>₪{getEffectiveLotPricing(lot).price} {getEffectiveLotPricing(lot).label}</span>
             </div>
           </div>
         </AdvancedMarker>
@@ -622,13 +717,17 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
           <ChatConsultation
             parkingLots={parkingLotsInRadius.map((lot) => {
               const distance = mapCenter ? distanceMeters(mapCenter, lot.location) : 0;
+              const effectivePricing = getEffectiveLotPricing(lot);
+              const activeSalePrice = getActiveSalePrice(lot);
 
               return {
                 id: lot.id,
                 name: lot.name,
                 distanceMeters: distance,
-                price: lot.salePrice ?? lot.basePrice,
-                salePrice: lot.salePrice ?? null,
+                price: effectivePricing.price,
+                pricingLabel: effectivePricing.label,
+                salePrice: activeSalePrice,
+                salePricingLabel: activeSalePrice === null ? null : getPricingDurationLabel(lot.activeSaleDurationUnit ?? lot.salePriceDurationUnit, lot.activeSaleDurationValue ?? lot.salePriceDurationValue),
                 recommendationCount: lot.recommendationCount ?? 0,
                 available: true,
               };

@@ -47,51 +47,120 @@
 }
 
 .owner-lot-analytics__range-trigger {
-  min-width: 220px;
-.owner-lot-analytics__chart--summary {
-  padding-block: 4px;
-}
-
-.owner-lot-analytics__summary-figure {
-  fill: #09344f;
-  font-size: 26px;
-  font-weight: 900;
-}
-
-.owner-lot-analytics__summary-caption {
-  fill: #245f84;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.owner-lot-analytics__summary-note {
+  min-width: 184px;
+  max-width: 212px;
+  border: 1px solid rgba(8, 80, 120, 0.14);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 248, 255, 0.98) 100%);
+  color: #09344f;
+  cursor: pointer;
+  text-align: right;
+  font: inherit;
+  box-shadow: 0 14px 30px rgba(8, 37, 56, 0.14);
+  padding: 11px 12px;
   display: grid;
-  font-size: 9px;
+  justify-items: stretch;
+  justify-content: stretch;
+  text-align: right;
+  gap: 8px;
+  transform-origin: top right;
+  transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+}
+
+.owner-lot-analytics__range-trigger:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 18px 34px rgba(8, 37, 56, 0.18);
+}
+
+.owner-lot-analytics__range-trigger--active {
+  border-color: rgba(10, 121, 179, 0.28);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(234, 245, 255, 1) 100%);
+  box-shadow: 0 18px 36px rgba(8, 37, 56, 0.18);
+}
+
+.owner-lot-analytics__range-trigger:focus-visible {
+  outline: none;
+  border-color: rgba(10, 121, 179, 0.32);
+  box-shadow: 0 0 0 4px rgba(69, 179, 255, 0.16), 0 18px 34px rgba(8, 37, 56, 0.18);
+}
+
+.owner-lot-analytics__range-trigger span {
+  width: 100%;
+  display: block;
+  color: #245f84;
+  font-size: 0.72rem;
   text-align: right;
 }
-  box-shadow: 0 18px 40px rgba(8, 37, 56, 0.16);
-  padding: 14px;
+
+.owner-lot-analytics__range-trigger strong {
+  width: 100%;
+  display: block;
+  color: #09344f;
+  font-size: 0.92rem;
+  text-align: right;
+}
+
+.owner-lot-analytics__range-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 5;
+  width: 188px;
+  max-width: min(188px, calc(100vw - 64px));
+  border: 1px solid rgba(8, 80, 120, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 38px rgba(8, 37, 56, 0.16);
+  padding: 12px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
+  transform-origin: top right;
+  animation: owner-lot-analytics-range-panel-in 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .owner-lot-analytics__range-field {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   color: #245f84;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   text-align: right;
 }
 
 .owner-lot-analytics__range-field select,
 .owner-lot-analytics__range-field input {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid rgba(8, 80, 120, 0.16);
-  border-radius: 14px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 8px 10px;
   color: #09344f;
   background: #fff;
   font: inherit;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.owner-lot-analytics__range-field input {
+  max-width: 92px;
+  justify-self: start;
+}
+
+.owner-lot-analytics__range-field select {
+  max-width: 118px;
+  justify-self: start;
+}
+
+.owner-lot-analytics__range-field select:hover,
+.owner-lot-analytics__range-field input:hover {
+  transform: translateY(-1px);
+  border-color: rgba(10, 121, 179, 0.22);
+}
+
+.owner-lot-analytics__range-field select:focus,
+.owner-lot-analytics__range-field input:focus {
+  outline: none;
+  border-color: rgba(10, 121, 179, 0.34);
+  box-shadow: 0 0 0 3px rgba(69, 179, 255, 0.14);
 }
 
 .owner-lot-analytics__metrics {
@@ -140,13 +209,14 @@
 .owner-lot-analytics__chart-card--enhanced {
   position: relative;
   overflow: hidden;
-  width: min(100%, 420px);
-  justify-self: start;
+  width: 100%;
+  justify-self: stretch;
   margin: 0;
   padding: 12px;
   gap: 8px;
+  border-color: color-mix(in srgb, var(--chart-primary, #0a79b3) 18%, rgba(8, 80, 120, 0.12));
   background:
-    radial-gradient(circle at top right, rgba(69, 179, 255, 0.16), transparent 34%),
+    radial-gradient(circle at top right, var(--chart-surface, rgba(69, 179, 255, 0.16)), transparent 34%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.99) 0%, rgba(242, 249, 255, 0.98) 100%);
 }
 
@@ -193,15 +263,36 @@
 }
 
 .owner-lot-analytics__chart-header strong {
-  color: #09344f;
+  color: var(--chart-primary, #09344f);
   text-align: right;
   font-size: 0.92rem;
 }
 
 .owner-lot-analytics__chart-header span {
-  color: #245f84;
+  color: var(--chart-primary, #245f84);
   font-size: 0.76rem;
   text-align: right;
+}
+
+.owner-lot-analytics__chart-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--chart-surface, rgba(69, 179, 255, 0.16)) 75%, white);
+  border: 1px solid color-mix(in srgb, var(--chart-primary, #0a79b3) 18%, transparent);
+}
+
+.owner-lot-analytics__chart-total span {
+  color: #245f84;
+  font-size: 0.72rem;
+}
+
+.owner-lot-analytics__chart-total strong {
+  color: var(--chart-primary, #09344f);
+  font-size: 0.9rem;
 }
 
 .owner-lot-analytics__chart-meta {
@@ -418,15 +509,31 @@
   }
 }
 
+@keyframes owner-lot-analytics-range-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .owner-lot-analytics__chart-area,
   .owner-lot-analytics__chart-line,
   .owner-lot-analytics__chart-point-glow,
-  .owner-lot-analytics__chart-tooltip {
+  .owner-lot-analytics__chart-tooltip,
+  .owner-lot-analytics__range-panel {
     animation: none;
   }
 
-  .owner-lot-analytics__chart-point {
+  .owner-lot-analytics__chart-point,
+  .owner-lot-analytics__range-trigger,
+  .owner-lot-analytics__range-field select,
+  .owner-lot-analytics__range-field input {
     transition: none;
   }
 }

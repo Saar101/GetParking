@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { OwnerLotsPopupLot } from "./OwnerLotsPopup";
 import { getActualHistoryForLot, getParkingLot } from "../../services/parkingLots.service";
 import type { BookingHistorySnapshot } from "../../services/users.service";
@@ -16,6 +16,7 @@ type ChartPalette = {
   secondary: string;
   grid: string;
   label: string;
+  surface: string;
 };
 
 const rangeUnitOptions: Array<{ value: RangeUnit; label: string }> = [
@@ -424,11 +425,13 @@ function MiniLineChart({
   valueSuffix: string;
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const chartId = useId().replace(/:/g, "");
   const width = 220;
   const height = 116;
   const padding = 14;
   const tooltipHalfWidth = 64;
   const maxValue = Math.max(...data.map((point) => point.value), 1);
+  const totalValue = data.reduce((sum, point) => sum + point.value, 0);
   const stepX = data.length > 1 ? (width - padding * 2) / (data.length - 1) : 0;
 
   const points = data.map((point, index) => {
@@ -449,18 +452,33 @@ function MiniLineChart({
     },
     { value: -1, index: 0, label: "" }
   );
-  const activeIndex = hoveredIndex ?? peakPoint.index;
-  const activePoint = points[activeIndex];
-  const visibleLabels = data.map((_, index) => shouldShowAxisLabel(index, data.length));
+  const activeIndex = hoveredIndex;
+  const activePoint = activeIndex === null ? null : points[activeIndex];
   const chartAnimationKey = data.map((point) => `${point.label}:${point.value}`).join("|");
   const tooltipLeft = activePoint ? clamp(activePoint.x, tooltipHalfWidth, width - tooltipHalfWidth) : width / 2;
   const tooltipShouldFlip = activePoint ? activePoint.y < 42 : false;
+  const lineGradientId = `owner-lot-analytics-line-gradient-${chartId}`;
+  const areaGradientId = `owner-lot-analytics-area-gradient-${chartId}`;
+  const lineShadowId = `owner-lot-analytics-line-shadow-${chartId}`;
 
   return (
-    <div className="owner-lot-analytics__chart-card owner-lot-analytics__chart-card--enhanced" onWheel={onWheel} onMouseLeave={() => setHoveredIndex(null)}>
+    <div
+      className="owner-lot-analytics__chart-card owner-lot-analytics__chart-card--enhanced"
+      style={{
+        ["--chart-primary" as string]: palette.primary,
+        ["--chart-secondary" as string]: palette.secondary,
+        ["--chart-surface" as string]: palette.surface,
+      }}
+      onWheel={onWheel}
+      onMouseLeave={() => setHoveredIndex(null)}
+    >
       <div className="owner-lot-analytics__chart-header">
         <strong>{title}</strong>
         <span>{hoveredIndex === null ? `שיא: ${formatNumber(peakPoint.value)}` : `ערך: ${formatNumber(data[hoveredIndex]?.value ?? 0)}`}</span>
+      </div>
+      <div className="owner-lot-analytics__chart-total">
+        <span>סה״כ בטווח שנבחר</span>
+        <strong>{formatNumber(totalValue)} {valueSuffix}</strong>
       </div>
       <div className="owner-lot-analytics__chart-meta">
         <span>טווח תצוגה: {formatNumber(data.length)} נקודות</span>
@@ -486,16 +504,16 @@ function MiniLineChart({
         aria-label="רמת ביקוש לפי תקופה"
       >
         <defs>
-          <linearGradient id="owner-lot-analytics-line-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#0a79b3" />
-            <stop offset="100%" stopColor="#45b3ff" />
+          <linearGradient id={lineGradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={palette.primary} />
+            <stop offset="100%" stopColor={palette.secondary} />
           </linearGradient>
-          <linearGradient id="owner-lot-analytics-area-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#45b3ff" stopOpacity="0.26" />
-            <stop offset="100%" stopColor="#45b3ff" stopOpacity="0.02" />
+          <linearGradient id={areaGradientId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor={palette.secondary} stopOpacity="0.26" />
+            <stop offset="100%" stopColor={palette.secondary} stopOpacity="0.02" />
           </linearGradient>
-          <filter id="owner-lot-analytics-line-shadow" x="-20%" y="-20%" width="140%" height="160%">
-            <feDropShadow dx="0" dy="10" stdDeviation="8" floodColor="#0a79b3" floodOpacity="0.18" />
+          <filter id={lineShadowId} x="-20%" y="-20%" width="140%" height="160%">
+            <feDropShadow dx="0" dy="10" stdDeviation="8" floodColor={palette.primary} floodOpacity="0.18" />
           </filter>
         </defs>
         {[0, 1, 2, 3].map((row) => (
@@ -510,23 +528,23 @@ function MiniLineChart({
             strokeDasharray="4 8"
           />
         ))}
-        {activePoint ? <line className="owner-lot-analytics__chart-guide" x1={activePoint.x} y1={padding} x2={activePoint.x} y2={height - padding} /> : null}
-        <path className="owner-lot-analytics__chart-area" d={areaPath} fill="url(#owner-lot-analytics-area-gradient)" />
-        <path className="owner-lot-analytics__chart-line" d={linePath} fill="none" stroke="url(#owner-lot-analytics-line-gradient)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" filter="url(#owner-lot-analytics-line-shadow)" />
+        {activePoint ? <line className="owner-lot-analytics__chart-guide" x1={activePoint.x} y1={padding} x2={activePoint.x} y2={height - padding} style={{ stroke: palette.primary }} /> : null}
+        <path className="owner-lot-analytics__chart-area" d={areaPath} fill={`url(#${areaGradientId})`} />
+        <path className="owner-lot-analytics__chart-line" d={linePath} fill="none" stroke={`url(#${lineGradientId})`} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" filter={`url(#${lineShadowId})`} />
         {points.map((point, index) => {
           const isPeak = index === peakPoint.index;
-          const isActive = index === activeIndex;
+          const isActive = activeIndex !== null && index === activeIndex;
 
           return (
             <g key={index} onMouseEnter={() => setHoveredIndex(index)}>
-              {isPeak || isActive ? <circle className="owner-lot-analytics__chart-point-glow" cx={point.x} cy={point.y} r={isActive ? "10" : "8"} fill="#45b3ff" opacity={isActive ? "0.24" : "0.18"} /> : null}
+              {isPeak || isActive ? <circle className="owner-lot-analytics__chart-point-glow" cx={point.x} cy={point.y} r={isActive ? "10" : "8"} fill={palette.secondary} opacity={isActive ? "0.24" : "0.18"} /> : null}
               <circle
                 className={`owner-lot-analytics__chart-point ${isActive ? "owner-lot-analytics__chart-point--active" : ""}`}
                 cx={point.x}
                 cy={point.y}
                 r={isActive ? "4.8" : isPeak ? "4.5" : "3.5"}
                 fill="#ffffff"
-                stroke={isActive || isPeak ? "#45b3ff" : palette.primary}
+                stroke={isActive || isPeak ? palette.secondary : palette.primary}
                 strokeWidth={isActive ? "2.8" : isPeak ? "2.5" : "2"}
               />
               <circle className="owner-lot-analytics__chart-hitbox" cx={point.x} cy={point.y} r="11" fill="transparent" />
@@ -542,6 +560,7 @@ export default function OwnerLotAnalytics({ lot }: { lot: OwnerLotsPopupLot }) {
   const [selectedUnit, setSelectedUnit] = useState<RangeUnit>("day");
   const [selectedAmount, setSelectedAmount] = useState(1);
   const [isRangePickerOpen, setIsRangePickerOpen] = useState(false);
+  const rangePickerRef = useRef<HTMLDivElement | null>(null);
   const [liveLot, setLiveLot] = useState(lot);
   const [historicalData, setHistoricalData] = useState<Array<BookingHistorySnapshot & { spaceId: string; date: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -598,12 +617,51 @@ export default function OwnerLotAnalytics({ lot }: { lot: OwnerLotsPopupLot }) {
     };
   }, [lot.id]);
 
+  useEffect(() => {
+    if (!isRangePickerOpen) {
+      return;
+    }
+
+    const handlePointerDownOutside = (event: MouseEvent) => {
+      if (!rangePickerRef.current?.contains(event.target as Node)) {
+        setIsRangePickerOpen(false);
+      }
+    };
+
+    window.addEventListener("mousedown", handlePointerDownOutside);
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDownOutside);
+    };
+  }, [isRangePickerOpen]);
+
   const palette = useMemo<ChartPalette>(() => {
     return {
       primary: "#0a79b3",
       secondary: "#45b3ff",
       grid: "rgba(8, 80, 120, 0.08)",
       label: "#245f84",
+      surface: "rgba(69, 179, 255, 0.16)",
+    };
+  }, []);
+
+  const cardChecksPalette = useMemo<ChartPalette>(() => {
+    return {
+      primary: "#0f766e",
+      secondary: "#2dd4bf",
+      grid: "rgba(15, 118, 110, 0.1)",
+      label: "#0f5f5a",
+      surface: "rgba(45, 212, 191, 0.14)",
+    };
+  }, []);
+
+  const recommendationsPalette = useMemo<ChartPalette>(() => {
+    return {
+      primary: "#c2410c",
+      secondary: "#fb923c",
+      grid: "rgba(194, 65, 12, 0.1)",
+      label: "#9a3412",
+      surface: "rgba(251, 146, 60, 0.16)",
     };
   }, []);
 
@@ -651,7 +709,7 @@ export default function OwnerLotAnalytics({ lot }: { lot: OwnerLotsPopupLot }) {
           <h3>{liveLot.name}</h3>
           <p className="owner-lot-analytics__description">נתוני החניון מוצגים בהתבסס על היסטוריית הזמנות אמיתית שנשמרה במערכת.</p>
         </div>
-        <div className="owner-lot-analytics__range-picker">
+        <div className="owner-lot-analytics__range-picker" ref={rangePickerRef}>
           <button
             type="button"
             className={`owner-lot-analytics__range-trigger ${isRangePickerOpen ? "owner-lot-analytics__range-trigger--active" : ""}`}
@@ -724,14 +782,14 @@ export default function OwnerLotAnalytics({ lot }: { lot: OwnerLotsPopupLot }) {
           </div>
         )}
         {cardChecksSeries.length > 0 ? (
-          <MiniLineChart data={cardChecksSeries} palette={palette} onWheel={handleRangeWheel} title="כניסות לכרטיס החניון" valueSuffix="כניסות" />
+          <MiniLineChart data={cardChecksSeries} palette={cardChecksPalette} onWheel={handleRangeWheel} title="כניסות לכרטיס החניון" valueSuffix="כניסות" />
         ) : (
           <div className="owner-lot-analytics__chart-card">
             <p style={{ color: "#245f84", textAlign: "center", padding: "20px" }}>אין עדיין היסטוריית כניסות לכרטיס</p>
           </div>
         )}
         {recommendationSeries.length > 0 ? (
-          <MiniLineChart data={recommendationSeries} palette={palette} onWheel={handleRangeWheel} title="המלצות לחניון לפי תקופה" valueSuffix="המלצות" />
+          <MiniLineChart data={recommendationSeries} palette={recommendationsPalette} onWheel={handleRangeWheel} title="המלצות לחניון לפי תקופה" valueSuffix="המלצות" />
         ) : (
           <div className="owner-lot-analytics__chart-card">
             <p style={{ color: "#245f84", textAlign: "center", padding: "20px" }}>אין עדיין היסטוריית המלצות לחניון</p>

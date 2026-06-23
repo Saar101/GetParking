@@ -324,8 +324,8 @@ export default function ChatConsultation({
                                 </div>
                                 <div className="chat-consultation-panel__item-meta">
                                   <span>מרחק: {Math.round(lot.distanceMeters)} מ'</span>
-                                  <span>מחיר: ₪{lot.price}/שעה</span>
-                                  <span>הנחה: {lot.salePrice !== null ? `₪${lot.salePrice}` : "אין"}</span>
+                                  <span>מחיר: ₪{lot.price} {lot.pricingLabel}</span>
+                                  <span>הנחה: {lot.salePrice !== null ? `₪${lot.salePrice} ${lot.salePricingLabel ?? ""}`.trim() : "אין"}</span>
                                   <span>המלצות: {lot.recommendationCount}</span>
                                 </div>
                               </div>

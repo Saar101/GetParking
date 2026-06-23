@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import appTitleLogo from "../../assets/ChatGPT Image Jan 26, 2026, 08_22_00 PM.png";
 import homeBackgroundImage from "../../assets/home-background.png";
-import { listParkingLots } from "../../services/parkingLots.service";
+import { getEffectiveLotPricing, listParkingLots, type ParkingLotPricingPatch, type ParkingPriceTier } from "../../services/parkingLots.service";
 import { getUser, getCurrentBookingUserDocId, listUsers, type UserDoc, type UserListItem } from "../../services/users.service";
 import {
   listParkingSpaces,
@@ -12,6 +12,7 @@ import {
 } from "../../services/parkingSpaces.service";
 import OwnerLotsPopup from "../OwnerLotsPopup";
 import OwnerLotAnalyticsPopup from "../OwnerLotsPopup/OwnerLotAnalyticsPopup";
+import OwnerPricingPopup from "../OwnerPricingPopup/OwnerPricingPopup";
 import OwnerSideBar from "../OwnerSideBar/OwnerSideBar";
 import "./OwnerMainScreen.css";
 
@@ -33,6 +34,20 @@ type OwnedLotView = {
   recommendationHistoryByHour?: Record<string, number>;
   cardChecksCount?: number;
   cardChecksHistoryByHour?: Record<string, number>;
+  basePrice: number;
+  basePricingTiers?: ParkingPriceTier[];
+  basePriceDurationUnit?: "minutes" | "hours" | "day";
+  basePriceDurationValue?: number;
+  salePrice?: number | null;
+  salePricingTiers?: ParkingPriceTier[] | null;
+  salePriceDurationUnit?: "minutes" | "hours" | "day" | null;
+  salePriceDurationValue?: number | null;
+  saleStartsAt?: string | null;
+  saleEndsAt?: string | null;
+  activeSalePrice?: number | null;
+  activeSalePricingTiers?: ParkingPriceTier[] | null;
+  activeSaleDurationUnit?: "minutes" | "hours" | "day" | null;
+  activeSaleDurationValue?: number | null;
 };
 
 type SpaceView = ParkingSpaceDoc & { id: string };
@@ -171,6 +186,7 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
   const [recentlyUpdatedSpaceStatus, setRecentlyUpdatedSpaceStatus] = useState<SpaceStatus | null>(null);
   const recentlyUpdatedSpaceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLotsPopupOpen = activePage === "lots";
+  const isPricingPopupOpen = activePage === "spaces";
   const [selectedAnalyticsLot, setSelectedAnalyticsLot] = useState<OwnedLotView | null>(null);
 
   const buildCustomerLookup = (users: UserListItem[]) => {
@@ -249,6 +265,20 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
             recommendationHistoryByHour: lot.recommendationHistoryByHour ?? {},
             cardChecksCount: lot.cardChecksCount ?? 0,
             cardChecksHistoryByHour: lot.cardChecksHistoryByHour ?? {},
+            basePrice: lot.basePrice,
+            basePricingTiers: lot.basePricingTiers ?? [],
+            basePriceDurationUnit: lot.basePriceDurationUnit ?? "hours",
+            basePriceDurationValue: lot.basePriceDurationValue ?? 1,
+            salePrice: lot.salePrice ?? null,
+            salePricingTiers: lot.salePricingTiers ?? null,
+            salePriceDurationUnit: lot.salePriceDurationUnit ?? null,
+            salePriceDurationValue: lot.salePriceDurationValue ?? null,
+            saleStartsAt: lot.saleStartsAt ?? null,
+            saleEndsAt: lot.saleEndsAt ?? null,
+            activeSalePrice: lot.activeSalePrice ?? null,
+            activeSalePricingTiers: lot.activeSalePricingTiers ?? null,
+            activeSaleDurationUnit: lot.activeSaleDurationUnit ?? null,
+            activeSaleDurationValue: lot.activeSaleDurationValue ?? null,
           };
         })
       );
@@ -483,6 +513,36 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
     setActivePage("dashboard");
   };
 
+  const closePricingPopup = () => {
+    setActivePage("dashboard");
+  };
+
+  const handlePricingSaved = (lotId: string, pricing: ParkingLotPricingPatch) => {
+    setOwnedLots((currentLots) => currentLots.map((lot) => {
+      if (lot.id !== lotId) {
+        return lot;
+      }
+
+      const primaryBaseTier = pricing.basePricingTiers[0];
+      const primarySaleTier = pricing.salePricingTiers?.[0] ?? null;
+
+      return {
+        ...lot,
+        ...pricing,
+        basePrice: primaryBaseTier?.price ?? lot.basePrice,
+        basePricingTiers: pricing.basePricingTiers,
+        basePriceDurationUnit: primaryBaseTier?.durationUnit ?? lot.basePriceDurationUnit,
+        basePriceDurationValue: primaryBaseTier?.durationValue ?? lot.basePriceDurationValue,
+        salePrice: primarySaleTier?.price ?? null,
+        salePricingTiers: pricing.salePricingTiers,
+        salePriceDurationUnit: primarySaleTier?.durationUnit ?? null,
+        salePriceDurationValue: primarySaleTier?.durationValue ?? null,
+        activeSalePrice: pricing.activeSalePrice ?? primarySaleTier?.price ?? null,
+        activeSalePricingTiers: pricing.activeSalePricingTiers ?? pricing.salePricingTiers,
+      };
+    }));
+  };
+
   const selectedReservationSpace = selectedReservationSpaceId
     ? displayedSpaces.find((space) => space.id === selectedReservationSpaceId) ?? null
     : null;
@@ -689,6 +749,17 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
         lot={selectedAnalyticsLot}
         onClose={closeLotAnalyticsPopup}
         onBackToLots={goBackToLotsPopup}
+      />
+
+      <OwnerPricingPopup
+        isOpen={isPricingPopupOpen}
+        lots={ownedLots.map((lot) => ({
+          ...lot,
+          effectivePrice: getEffectiveLotPricing(lot).price,
+          effectivePriceLabel: getEffectiveLotPricing(lot).label,
+        }))}
+        onClose={closePricingPopup}
+        onSaved={handlePricingSaved}
       />
 
       {selectedReservationSpace ? (
