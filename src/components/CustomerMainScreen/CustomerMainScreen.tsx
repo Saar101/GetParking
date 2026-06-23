@@ -5,6 +5,7 @@ import BookingsTable from "../BookingsTable/BookingsTable";
 import BookingBubbles from "../BookingBubbles/BookingBubbles";
 import FavoritesTable from "../FavoritesTable/FavoritesTable";
 import GoogleMapTest from "../GoogleMapTest.tsx/GoogleMapTest";
+import LogoutConfirmPopup from "../LogoutConfirmPopup/LogoutConfirmPopup";
 import ParkingInfo from "../ParkingInfo/ParkingInfo";
 import SidBar from "../SidBar/SidBar";
 import UserSettings from "../UserSettings/UserSettings";
@@ -24,6 +25,7 @@ export default function CustomerMainScreen({ userName, onLogout, showIntro }: Cu
   const [showBookings, setShowBookings] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [activeSidebarPage, setActiveSidebarPage] = useState<'find' | 'bookings' | 'favorites' | 'settings' | 'logout'>('find');
 
   const mockParkingSpace = {
@@ -74,6 +76,20 @@ export default function CustomerMainScreen({ userName, onLogout, showIntro }: Cu
     setActiveSidebarPage('find');
   };
 
+  const handleRequestLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleCancelLogout = () => {
+    setShowLogoutConfirm(false);
+    setActiveSidebarPage('find');
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false);
+    onLogout();
+  };
+
   return (
     <div
       className={`app-shell ${showIntro ? "app-shell--intro" : ""}`}
@@ -81,7 +97,7 @@ export default function CustomerMainScreen({ userName, onLogout, showIntro }: Cu
     >
       <div className="app-shell__content">
         <SidBar
-          onLogout={onLogout}
+          onLogout={handleRequestLogout}
           onBookingsClick={() => setShowBookings(true)}
           onFavoritesClick={() => setShowFavorites(true)}
           onSettingsClick={() => setShowSettings(true)}
@@ -140,6 +156,7 @@ export default function CustomerMainScreen({ userName, onLogout, showIntro }: Cu
           <BookingsTable isOpen={showBookings} onClose={handleCloseBookings} />
           <FavoritesTable isOpen={showFavorites} onClose={handleCloseFavorites} />
           <UserSettings isOpen={showSettings} onClose={handleCloseSettings} />
+          <LogoutConfirmPopup isOpen={showLogoutConfirm} onConfirm={handleConfirmLogout} onCancel={handleCancelLogout} />
         </div>
       </div>
     </div>

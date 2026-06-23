@@ -75,6 +75,12 @@ export default function OwnerSideBar({
   const handleNavClick = (pageId: OwnerSidebarPageId) => {
     const nextPage = pageId;
     setClickedPage(nextPage);
+
+    if (pageId === 'logout') {
+      onLogout?.();
+      return;
+    }
+
     onPageChange?.(nextPage);
 
     if (pageId === 'dashboard') {
@@ -97,10 +103,6 @@ export default function OwnerSideBar({
       return;
     }
 
-    if (pageId === 'logout') {
-      onLogout?.();
-      return;
-    }
   };
 
   return (

@@ -15,6 +15,7 @@ import OwnerLotAnalyticsPopup from "../OwnerLotsPopup/OwnerLotAnalyticsPopup";
 import OwnerPricingPopup from "../OwnerPricingPopup/OwnerPricingPopup";
 import OwnerSideBar from "../OwnerSideBar/OwnerSideBar";
 import OwnerUserSettings from "../OwnerUserSettings/OwnerUserSettings";
+import LogoutConfirmPopup from "../LogoutConfirmPopup/LogoutConfirmPopup";
 import "./OwnerMainScreen.css";
 
 type OwnerMainScreenProps = {
@@ -182,6 +183,7 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
   const [selectedReservationSpaceId, setSelectedReservationSpaceId] = useState<string | null>(null);
   const [savingSpaceId, setSavingSpaceId] = useState<string | null>(null);
   const [activePage, setActivePage] = useState<'dashboard' | 'lots' | 'spaces' | 'alerts' | 'logout'>('dashboard');
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
   const [recentlyUpdatedSpaceId, setRecentlyUpdatedSpaceId] = useState<string | null>(null);
   const [recentlyUpdatedSpaceStatus, setRecentlyUpdatedSpaceStatus] = useState<SpaceStatus | null>(null);
@@ -523,6 +525,20 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
     setActivePage("dashboard");
   };
 
+  const handleRequestLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const handleCancelLogout = () => {
+    setShowLogoutConfirm(false);
+    setActivePage("dashboard");
+  };
+
+  const handleConfirmLogout = () => {
+    setShowLogoutConfirm(false);
+    onLogout();
+  };
+
   const handlePricingSaved = (lotId: string, pricing: ParkingLotPricingPatch) => {
     setOwnedLots((currentLots) => currentLots.map((lot) => {
       if (lot.id !== lotId) {
@@ -558,7 +574,7 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
       <div className="app-shell__content owner-main-screen">
         <OwnerSideBar
           userName={userName}
-          onLogout={onLogout}
+          onLogout={handleRequestLogout}
           activePage={activePage}
           onPageChange={setActivePage}
           onDashboardClick={() => setActivePage('dashboard')}
@@ -573,9 +589,6 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
             <h1>שלום {userName}</h1>
             <p>זהו מסך הניהול של בעל החניון. כאן תוכל לראות את החניונים שלך, מצב המקומות, ולעדכן סטטוסים במהירות.</p>
           </div>
-          <button className="owner-main-screen__logout" onClick={onLogout} type="button">
-            התנתקות
-          </button>
         </header>
 
         {loading ? <div className="owner-main-screen__state">טוען נתונים...</div> : null}
@@ -771,6 +784,12 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
       <OwnerUserSettings
         isOpen={isOwnerSettingsOpen}
         onClose={closeOwnerSettingsPopup}
+      />
+
+      <LogoutConfirmPopup
+        isOpen={showLogoutConfirm}
+        onConfirm={handleConfirmLogout}
+        onCancel={handleCancelLogout}
       />
 
       {selectedReservationSpace ? (

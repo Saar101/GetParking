@@ -73,6 +73,12 @@ export default function SidBar({
   const handleNavClick = (pageId: SidebarPageId) => {
     const nextPage = pageId;
     setClickedPage(nextPage);
+
+    if (pageId === 'logout') {
+      onLogout?.();
+      return;
+    }
+
     onPageChange?.(nextPage);
 
     if (pageId === 'bookings') {
@@ -90,10 +96,6 @@ export default function SidBar({
       return;
     }
 
-    if (pageId === 'logout') {
-      onLogout?.();
-      return;
-    }
     console.log(`Navigate to: ${pageId}`);
   };
 

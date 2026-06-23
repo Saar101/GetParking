@@ -11,13 +11,6 @@ type OwnerUserSettingsProps = {
   onClose: () => void;
 };
 
-function getCurrentTime(): string {
-  const now = new Date();
-  const hours = String(now.getHours()).padStart(2, "0");
-  const minutes = String(now.getMinutes()).padStart(2, "0");
-  return `${hours}:${minutes}`;
-}
-
 const INITIAL_SETTINGS: UserSettingsModel = {
   displayName: "",
   email: "",
@@ -25,7 +18,7 @@ const INITIAL_SETTINGS: UserSettingsModel = {
   licensePlate: "",
   defaultDurationHours: 2,
   defaultSearchRadiusKm: 250,
-  defaultArrivalTime: getCurrentTime(),
+  defaultArrivalTime: "09:00",
   defaultArrivalTimeUsesCurrentTime: true,
   notificationsEnabled: true,
 };
@@ -94,11 +87,6 @@ export default function OwnerUserSettings({ isOpen, onClose }: OwnerUserSettings
       return;
     }
 
-    if (draft.defaultSearchRadiusKm < 250 || draft.defaultSearchRadiusKm > 1000) {
-      setError("רדיוס ברירת מחדל חייב להיות בין 250 ל-1000 מטר.");
-      return;
-    }
-
     setSaving(true);
     setError("");
     setMessage("");
@@ -109,19 +97,7 @@ export default function OwnerUserSettings({ isOpen, onClose }: OwnerUserSettings
         phoneNumber: draft.phoneNumber,
         licensePlate: draft.licensePlate,
         defaultDurationHours: draft.defaultDurationHours,
-        defaultSearchRadiusKm: draft.defaultSearchRadiusKm,
-        defaultArrivalTime: draft.defaultArrivalTime,
-        defaultArrivalTimeUsesCurrentTime: draft.defaultArrivalTimeUsesCurrentTime,
-        notificationsEnabled: draft.notificationsEnabled,
       });
-
-      window.dispatchEvent(
-        new CustomEvent("user-settings-updated", {
-          detail: {
-            notificationsEnabled: draft.notificationsEnabled,
-          },
-        })
-      );
 
       setSettings(draft);
       setIsEditing(false);
@@ -212,55 +188,6 @@ export default function OwnerUserSettings({ isOpen, onClose }: OwnerUserSettings
               />
             </label>
 
-            <label className="user-settings-field">
-              <span>רדיוס ברירת מחדל להצגה (מטר)</span>
-              <input
-                type="number"
-                min={250}
-                max={1000}
-                step={50}
-                value={draft.defaultSearchRadiusKm}
-                onChange={(event) => setDraft((prev) => ({ ...prev, defaultSearchRadiusKm: Number(event.target.value) || 250 }))}
-                readOnly={!isEditing}
-                disabled={!isEditing}
-              />
-            </label>
-
-            <label className="user-settings-field">
-              <span>שעת התחלה מועדפת</span>
-              <label className="user-settings-toggle" style={{ marginBottom: 8 }}>
-                <input
-                  type="checkbox"
-                  checked={draft.defaultArrivalTimeUsesCurrentTime}
-                  onChange={(event) =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      defaultArrivalTimeUsesCurrentTime: event.target.checked,
-                      defaultArrivalTime: event.target.checked ? getCurrentTime() : prev.defaultArrivalTime,
-                    }))
-                  }
-                  disabled={!isEditing}
-                />
-                <span>השתמש בשעה הנוכחית כברירת מחדל</span>
-              </label>
-              <input
-                type="time"
-                value={draft.defaultArrivalTime}
-                onChange={(event) => setDraft((prev) => ({ ...prev, defaultArrivalTime: event.target.value }))}
-                readOnly={!isEditing || draft.defaultArrivalTimeUsesCurrentTime}
-                disabled={!isEditing || draft.defaultArrivalTimeUsesCurrentTime}
-              />
-            </label>
-
-            <label className="user-settings-toggle">
-              <input
-                type="checkbox"
-                checked={draft.notificationsEnabled}
-                onChange={(event) => setDraft((prev) => ({ ...prev, notificationsEnabled: event.target.checked }))}
-                disabled={!isEditing}
-              />
-              <span>לקבל התראות על הזמנות, תפוסה ועדכוני חניון</span>
-            </label>
           </div>
         ) : null}
 
