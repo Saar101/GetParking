@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../../firebase";
 import { listUserBookings, type UserBookingRow } from "../../services/parkingSpaces.service";
 import { getCurrentBookingUserDocId, getCurrentUserSettings } from "../../services/users.service";
 import "./BookingBubbles.css";
@@ -96,8 +98,36 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
   const [hiddenCancelledKeys, setHiddenCancelledKeys] = useState<string[]>([]);
   const [selectedCancelledBooking, setSelectedCancelledBooking] = useState<UserBookingRow | null>(null);
 
+  const loadBookingsForUser = async (resolvedUserDocId: string, mounted: boolean) => {
+    const bookings = await listUserBookings(resolvedUserDocId);
+
+    if (!mounted) {
+      return;
+    }
+
+    const nextItems = bookings
+      .filter((booking) => booking.status === "active" || booking.status === "future" || (booking.status === "past" && booking.historyOutcome === "cancelled"))
+      .sort((left, right) => {
+        const statusRank = { active: 0, future: 1, cancelled: 2 } as const;
+        const leftRank = left.status === "past" && left.historyOutcome === "cancelled" ? statusRank.cancelled : statusRank[left.status];
+        const rightRank = right.status === "past" && right.historyOutcome === "cancelled" ? statusRank.cancelled : statusRank[right.status];
+
+        const rankDiff = leftRank - rightRank;
+
+        if (rankDiff !== 0) {
+          return rankDiff;
+        }
+
+        return getBubbleProximityTime(left) - getBubbleProximityTime(right);
+      });
+
+    setItems(nextItems);
+  };
+
   useEffect(() => {
     let mounted = true;
+    let unsubscribeUserDoc: (() => void) | null = null;
+    let subscribedUserDocId: string | null = null;
 
     const load = async () => {
       try {
@@ -118,29 +148,15 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
           return;
         }
 
-        const bookings = await listUserBookings(resolvedUserDocId);
-
-        if (!mounted) {
-          return;
+        if (subscribedUserDocId !== resolvedUserDocId) {
+          unsubscribeUserDoc?.();
+          subscribedUserDocId = resolvedUserDocId;
+          unsubscribeUserDoc = onSnapshot(doc(db, "users", resolvedUserDocId), () => {
+            void loadBookingsForUser(resolvedUserDocId, mounted);
+          });
         }
 
-        const nextItems = bookings
-          .filter((booking) => booking.status === "active" || booking.status === "future" || (booking.status === "past" && booking.historyOutcome === "cancelled"))
-          .sort((left, right) => {
-            const statusRank = { active: 0, future: 1, cancelled: 2 } as const;
-            const leftRank = left.status === "past" && left.historyOutcome === "cancelled" ? statusRank.cancelled : statusRank[left.status];
-            const rightRank = right.status === "past" && right.historyOutcome === "cancelled" ? statusRank.cancelled : statusRank[right.status];
-
-            const rankDiff = leftRank - rightRank;
-
-            if (rankDiff !== 0) {
-              return rankDiff;
-            }
-
-            return getBubbleProximityTime(left) - getBubbleProximityTime(right);
-          });
-
-        setItems(nextItems);
+        await loadBookingsForUser(resolvedUserDocId, mounted);
       } catch {
         if (mounted) {
           setItems([]);
@@ -163,6 +179,7 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
 
     return () => {
       mounted = false;
+      unsubscribeUserDoc?.();
       window.removeEventListener("user-settings-updated", handleRefresh as EventListener);
       window.removeEventListener("user-bookings-updated", handleRefresh as EventListener);
       window.clearInterval(intervalId);
@@ -195,9 +212,23 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
     setHiddenCancelledKeys([]);
   }, [userDocId]);
 
-  const bubbles = useMemo<BubbleViewModel[]>(() => {
-    return items.slice(0, 3).map((item, index) => ({
-      id: `${item.spaceId}-${index}`,
+  const visibleBubbles = useMemo<BubbleViewModel[]>(() => {
+    const visibleItems = items.filter((item) => {
+      if (!(item.status === "past" && item.historyOutcome === "cancelled")) {
+        return true;
+      }
+
+      return !hiddenCancelledKeys.includes(getCancelledBubbleKey(item));
+    });
+
+    const cancelledItems = visibleItems
+      .filter((item) => item.status === "past" && item.historyOutcome === "cancelled")
+      .sort((left, right) => getBubbleProximityTime(right) - getBubbleProximityTime(left));
+
+    const regularItems = visibleItems.filter((item) => !(item.status === "past" && item.historyOutcome === "cancelled"));
+
+    return [...cancelledItems, ...regularItems].slice(0, 3).map((item, index) => ({
+      id: `${item.spaceId}-${item.reservedFrom ?? item.reservedUntil ?? index}`,
       title:
         item.status === "active"
           ? "החניה שלך פעילה"
@@ -208,17 +239,7 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
       status: item.status === "past" && item.historyOutcome === "cancelled" ? "cancelled" : item.status,
       booking: item,
     }));
-  }, [items]);
-
-  const visibleBubbles = useMemo(() => {
-    return bubbles.filter((bubble) => {
-      if (bubble.status !== "cancelled") {
-        return true;
-      }
-
-      return !hiddenCancelledKeys.includes(getCancelledBubbleKey(bubble.booking));
-    });
-  }, [bubbles, hiddenCancelledKeys]);
+  }, [items, hiddenCancelledKeys]);
 
   const persistHiddenCancelledKeys = (nextHiddenKeys: string[]) => {
     setHiddenCancelledKeys(nextHiddenKeys);
