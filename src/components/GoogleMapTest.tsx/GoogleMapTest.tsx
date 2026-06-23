@@ -379,6 +379,11 @@ function MapContent({
               }
             }}
           >
+            {getActiveSalePrice(lot) !== null ? (
+              <div className="gmt-parking-lot-sale-badge" aria-label="מבצע פעיל">
+                מבצע
+              </div>
+            ) : null}
             <div className="gmt-parking-lot-pin">🅿️</div>
             <div className="gmt-parking-lot-tooltip">
               <strong>{lot.name}</strong>
