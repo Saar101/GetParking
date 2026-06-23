@@ -577,7 +577,8 @@ export async function getActualHistoryForLot(lotId: string): Promise<{
       const user = userDoc.data() as UserDoc;
       const bookingHistoryDetails = user.bookingHistoryDetails ?? {};
 
-      Object.entries(bookingHistoryDetails).forEach(([spaceId, booking]) => {
+      Object.entries(bookingHistoryDetails).forEach(([historyKey, booking]) => {
+        const spaceId = historyKey.split("__")[0] ?? historyKey;
         // Filter only spaces that belong to this lot (e.g., "L01-01" for "L01")
         if (spaceId.startsWith(`${lotId}-`)) {
           allBookings.push({

@@ -4,9 +4,9 @@ import {
   updateCurrentUserSettings,
   type UserSettings as UserSettingsModel,
 } from "../../services/users.service";
-import "./UserSettings.css";
+import "../UserSettings/UserSettings.css";
 
-type UserSettingsProps = {
+type OwnerUserSettingsProps = {
   isOpen: boolean;
   onClose: () => void;
 };
@@ -32,7 +32,7 @@ const INITIAL_SETTINGS: UserSettingsModel = {
 
 const SETTINGS_ANIMATION_MS = 240;
 
-export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
+export default function OwnerUserSettings({ isOpen, onClose }: OwnerUserSettingsProps) {
   const [settings, setSettings] = useState<UserSettingsModel>(INITIAL_SETTINGS);
   const [draft, setDraft] = useState<UserSettingsModel>(INITIAL_SETTINGS);
   const [isRendered, setIsRendered] = useState(isOpen);
@@ -55,7 +55,7 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
       setIsEditing(false);
     } catch (loadError) {
       const msg = loadError instanceof Error ? loadError.message : String(loadError);
-      setError(msg || "לא הצלחנו לטעון את ההגדרות.");
+      setError(msg || "לא הצלחנו לטעון את הגדרות המנהל.");
     } finally {
       setLoading(false);
     }
@@ -85,17 +85,17 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
 
   const handleSave = async () => {
     if (!draft.displayName.trim()) {
-      setError("שם משתמש הוא שדה חובה.");
+      setError("שם מנהל הוא שדה חובה.");
       return;
     }
 
-    if (draft.defaultDurationHours < 1 || draft.defaultDurationHours > 24) {
-      setError("משך ברירת מחדל חייב להיות בין שעה ל-24 שעות.");
+    if (draft.phoneNumber.trim() && !/^\+?[0-9\-\s]{9,15}$/.test(draft.phoneNumber.trim())) {
+      setError("יש להזין מספר פלאפון תקין.");
       return;
     }
 
     if (draft.defaultSearchRadiusKm < 250 || draft.defaultSearchRadiusKm > 1000) {
-      setError("רדיוס חיפוש ברירת מחדל חייב להיות בין 250 ל-1000 מטר.");
+      setError("רדיוס ברירת מחדל חייב להיות בין 250 ל-1000 מטר.");
       return;
     }
 
@@ -106,6 +106,7 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
     try {
       await updateCurrentUserSettings({
         displayName: draft.displayName,
+        phoneNumber: draft.phoneNumber,
         licensePlate: draft.licensePlate,
         defaultDurationHours: draft.defaultDurationHours,
         defaultSearchRadiusKm: draft.defaultSearchRadiusKm,
@@ -124,10 +125,10 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
 
       setSettings(draft);
       setIsEditing(false);
-      setMessage("ההגדרות נשמרו בהצלחה.");
+      setMessage("הגדרות המנהל נשמרו בהצלחה.");
     } catch (saveError) {
       const msg = saveError instanceof Error ? saveError.message : String(saveError);
-      setError(msg || "לא הצלחנו לשמור את ההגדרות כרגע.");
+      setError(msg || "לא הצלחנו לשמור את הגדרות המנהל כרגע.");
     } finally {
       setSaving(false);
     }
@@ -147,56 +148,36 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
     setIsEditing(false);
   };
 
-  const handleResetArrivalTime = () => {
-    if (!isEditing) {
-      return;
-    }
-
-    setDraft((prev) => ({
-      ...prev,
-      defaultArrivalTime: getCurrentTime(),
-      defaultArrivalTimeUsesCurrentTime: true,
-    }));
-  };
-
   if (!isRendered) {
     return null;
   }
 
   return (
-    <div
-      className={`user-settings-overlay ${isClosing ? "user-settings-overlay--closing" : ""}`}
-      onClick={onClose}
-    >
-      <section
-        className={`user-settings-panel ${isClosing ? "user-settings-panel--closing" : ""}`}
-        onClick={(event) => event.stopPropagation()}
-      >
+    <div className={`user-settings-overlay ${isClosing ? "user-settings-overlay--closing" : ""}`} onClick={onClose}>
+      <section className={`user-settings-panel ${isClosing ? "user-settings-panel--closing" : ""}`} onClick={(event) => event.stopPropagation()}>
         <header className="user-settings-header">
           <div>
-            <p className="user-settings-eyebrow">Default preferences</p>
-            <h2>הגדרות משתמש</h2>
-            <p className="user-settings-subtitle">כאן אפשר להגדיר ערכי ברירת מחדל ולהתאים את החשבון שלך</p>
+            <p className="user-settings-eyebrow">Owner preferences</p>
+            <h2>הגדרות מנהל חניון</h2>
+            <p className="user-settings-subtitle">כאן אפשר לעדכן את פרטי החשבון והעדפות ברירת המחדל של מנהל החניון</p>
           </div>
           <button className="user-settings-close" onClick={onClose} type="button" aria-label="סגירה">
             ✕
           </button>
         </header>
 
-        {loading ? <p className="user-settings-state">טוען הגדרות...</p> : null}
+        {loading ? <p className="user-settings-state">טוען הגדרות מנהל...</p> : null}
         {error ? <p className="user-settings-error">{error}</p> : null}
         {message ? <p className="user-settings-message">{message}</p> : null}
 
         {!loading ? (
           <div className={`user-settings-grid ${isEditing ? "user-settings-grid--editing" : ""}`}>
             <label className="user-settings-field">
-              <span>שם משתמש</span>
+              <span>שם מנהל</span>
               <input
                 type="text"
                 value={draft.displayName}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, displayName: event.target.value }))
-                }
+                onChange={(event) => setDraft((prev) => ({ ...prev, displayName: event.target.value }))}
                 readOnly={!isEditing}
                 disabled={!isEditing}
               />
@@ -208,13 +189,11 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
             </label>
 
             <label className="user-settings-field">
-              <span>לוחית זיהוי</span>
+              <span>לוחית רכב עיקרית</span>
               <input
                 type="text"
                 value={draft.licensePlate}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, licensePlate: event.target.value.toUpperCase() }))
-                }
+                onChange={(event) => setDraft((prev) => ({ ...prev, licensePlate: event.target.value.toUpperCase() }))}
                 placeholder="12-345-67"
                 readOnly={!isEditing}
                 disabled={!isEditing}
@@ -222,44 +201,33 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
             </label>
 
             <label className="user-settings-field">
-              <span>משך הזמנה ברירת מחדל (שעות)</span>
+              <span>מספר פלאפון</span>
               <input
-                type="number"
-                min={1}
-                max={24}
-                value={draft.defaultDurationHours}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    defaultDurationHours: Number(event.target.value) || 1,
-                  }))
-                }
+                type="tel"
+                value={draft.phoneNumber}
+                onChange={(event) => setDraft((prev) => ({ ...prev, phoneNumber: event.target.value }))}
+                placeholder="050-123-4567"
                 readOnly={!isEditing}
                 disabled={!isEditing}
               />
             </label>
 
             <label className="user-settings-field">
-              <span>רדיוס חיפוש ברירת מחדל (מטר)</span>
+              <span>רדיוס ברירת מחדל להצגה (מטר)</span>
               <input
                 type="number"
                 min={250}
                 max={1000}
                 step={50}
                 value={draft.defaultSearchRadiusKm}
-                onChange={(event) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    defaultSearchRadiusKm: Number(event.target.value) || 250,
-                  }))
-                }
+                onChange={(event) => setDraft((prev) => ({ ...prev, defaultSearchRadiusKm: Number(event.target.value) || 250 }))}
                 readOnly={!isEditing}
                 disabled={!isEditing}
               />
             </label>
 
             <label className="user-settings-field">
-              <span>שעת הגעה מועדפת</span>
+              <span>שעת התחלה מועדפת</span>
               <label className="user-settings-toggle" style={{ marginBottom: 8 }}>
                 <input
                   type="checkbox"
@@ -273,14 +241,12 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
                   }
                   disabled={!isEditing}
                 />
-                <span>השתמש בשעה הנכחית בכל הזמנה</span>
+                <span>השתמש בשעה הנוכחית כברירת מחדל</span>
               </label>
               <input
                 type="time"
                 value={draft.defaultArrivalTime}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, defaultArrivalTime: event.target.value }))
-                }
+                onChange={(event) => setDraft((prev) => ({ ...prev, defaultArrivalTime: event.target.value }))}
                 readOnly={!isEditing || draft.defaultArrivalTimeUsesCurrentTime}
                 disabled={!isEditing || draft.defaultArrivalTimeUsesCurrentTime}
               />
@@ -290,12 +256,10 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
               <input
                 type="checkbox"
                 checked={draft.notificationsEnabled}
-                onChange={(event) =>
-                  setDraft((prev) => ({ ...prev, notificationsEnabled: event.target.checked }))
-                }
+                onChange={(event) => setDraft((prev) => ({ ...prev, notificationsEnabled: event.target.checked }))}
                 disabled={!isEditing}
               />
-              <span>לקבל התראות על הזמנות עתידיות</span>
+              <span>לקבל התראות על הזמנות, תפוסה ועדכוני חניון</span>
             </label>
           </div>
         ) : null}
@@ -305,30 +269,15 @@ export default function UserSettings({ isOpen, onClose }: UserSettingsProps) {
             סגירה
           </button>
           {!isEditing ? (
-            <button
-              className="user-settings-button user-settings-button--primary"
-              onClick={handleStartEdit}
-              type="button"
-              disabled={loading}
-            >
+            <button className="user-settings-button user-settings-button--primary" onClick={handleStartEdit} type="button" disabled={loading}>
               עריכה
             </button>
           ) : (
             <>
-              <button
-                className="user-settings-button user-settings-button--ghost"
-                onClick={handleCancelEdit}
-                type="button"
-                disabled={saving}
-              >
+              <button className="user-settings-button user-settings-button--ghost" onClick={handleCancelEdit} type="button" disabled={saving}>
                 ביטול
               </button>
-              <button
-                className="user-settings-button user-settings-button--primary"
-                onClick={() => void handleSave()}
-                type="button"
-                disabled={saving || loading}
-              >
+              <button className="user-settings-button user-settings-button--primary" onClick={() => void handleSave()} type="button" disabled={saving || loading}>
                 {saving ? "שומר..." : "שמירת הגדרות"}
               </button>
             </>

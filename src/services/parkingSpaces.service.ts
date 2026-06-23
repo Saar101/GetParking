@@ -106,7 +106,21 @@ export async function getAvailableParkingSpacesForLot(lotId: string) {
       id: spaceDoc.id,
       ...(spaceDoc.data() as ParkingSpaceDoc),
     }))
-    .filter((space) => space.parkingLotId === lotId && space.status !== "occupied")
+    .filter((space) => {
+      if (space.parkingLotId !== lotId || space.status === "occupied") {
+        return false;
+      }
+
+      if (space.status === "available") {
+        return true;
+      }
+
+      if (space.status === "reserved") {
+        return resolveBookingStatus(space.reservation?.reservedFrom ?? null, space.reservation?.reservedUntil ?? null) === "past";
+      }
+
+      return false;
+    })
     .sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -186,6 +200,13 @@ export async function reserveParkingSpaceForCustomer(
     const space = spaceSnap.data() as ParkingSpaceDoc;
 
     if (space.status === "occupied") {
+      throw new Error(`Space ${spaceId} is already reserved or occupied`);
+    }
+
+    if (
+      space.status === "reserved" &&
+      resolveBookingStatus(space.reservation?.reservedFrom ?? null, space.reservation?.reservedUntil ?? null) !== "past"
+    ) {
       throw new Error(`Space ${spaceId} is already reserved or occupied`);
     }
 
@@ -359,7 +380,7 @@ export async function releaseParkingSpaceReservation(
           ? {
               bookingHistoryDetails: {
                 ...bookingHistoryDetails,
-                [spaceId]: reservationSnapshot,
+                [`${spaceId}__${reservationSnapshot.endedAt ?? new Date().toISOString()}`]: reservationSnapshot,
               },
             }
           : {}),
@@ -503,6 +524,10 @@ function resolveBookingStatus(reservedFrom: string | null, reservedUntil: string
   return "past";
 }
 
+function extractHistorySpaceId(historyKey: string) {
+  return historyKey.split("__")[0] ?? historyKey;
+}
+
 export async function listUserBookings(userDocId?: string): Promise<UserBookingRow[]> {
   const resolvedUserDocId = userDocId ?? (await getCurrentBookingUserDocId());
   const userSnap = await getDoc(doc(db, usersCol, resolvedUserDocId));
@@ -533,7 +558,28 @@ export async function listUserBookings(userDocId?: string): Promise<UserBookingR
     })
   );
 
-  const rowsBySpaceId = new Map<string, UserBookingRow>();
+  const rows: UserBookingRow[] = [];
+
+  Object.entries(bookingHistoryDetails).forEach(([historyKey, historySnapshot]) => {
+    const spaceId = extractHistorySpaceId(historyKey);
+    const lotId = spaceId.includes("-") ? spaceId.split("-")[0] : spaceId;
+    const lotMeta = lotById.get(lotId);
+
+    rows.push({
+      spaceId,
+      lotId,
+      lotName: lotMeta?.name ?? lotId,
+      lotAddress: lotMeta?.address ?? "",
+      date: historySnapshot.date ?? null,
+      startTime: historySnapshot.startTime ?? null,
+      durationHours: historySnapshot.durationHours ?? null,
+      reservedFrom: historySnapshot.reservedFrom ?? null,
+      reservedUntil: historySnapshot.reservedUntil ?? null,
+      status: "past",
+      source: "history",
+      historyOutcome: historySnapshot.endReason ?? null,
+    });
+  });
 
   for (const spaceDoc of spacesSnap.docs) {
     const spaceId = spaceDoc.id;
@@ -542,45 +588,31 @@ export async function listUserBookings(userDocId?: string): Promise<UserBookingR
     const lotMeta = lotById.get(space.parkingLotId);
     const inHistory = bookingHistory.includes(spaceId);
     const belongsToUserReservation = reservation?.reservedByUserDocId === resolvedUserDocId;
-    const historySnapshot = bookingHistoryDetails[spaceId] ?? null;
-
     if (!inHistory && !belongsToUserReservation) {
       continue;
     }
 
-    const isPastReservation = reservation
-      ? resolveBookingStatus(reservation.reservedFrom, reservation.reservedUntil) === "past"
-      : false;
-
-    const historyOutcome = historySnapshot?.endReason ?? (
-      belongsToUserReservation && isPastReservation
-        ? "ended"
-        : inHistory && !reservation
-          ? "cancelled"
-          : null
-    );
+    if (!reservation) {
+      continue;
+    }
 
     const row: UserBookingRow = {
       spaceId,
       lotId: space.parkingLotId,
       lotName: lotMeta?.name ?? space.parkingLotId,
       lotAddress: lotMeta?.address ?? "",
-      date: reservation?.date ?? historySnapshot?.date ?? null,
-      startTime: reservation?.startTime ?? historySnapshot?.startTime ?? null,
-      durationHours: reservation?.durationHours ?? historySnapshot?.durationHours ?? null,
-      reservedFrom: reservation?.reservedFrom ?? historySnapshot?.reservedFrom ?? null,
-      reservedUntil: reservation?.reservedUntil ?? historySnapshot?.reservedUntil ?? null,
-      status: reservation
-        ? resolveBookingStatus(reservation.reservedFrom, reservation.reservedUntil)
-        : "past",
+      date: reservation.date ?? null,
+      startTime: reservation.startTime ?? null,
+      durationHours: reservation.durationHours ?? null,
+      reservedFrom: reservation.reservedFrom ?? null,
+      reservedUntil: reservation.reservedUntil ?? null,
+      status: resolveBookingStatus(reservation.reservedFrom, reservation.reservedUntil),
       source: belongsToUserReservation ? "reservation" : "history",
-      historyOutcome,
+      historyOutcome: resolveBookingStatus(reservation.reservedFrom, reservation.reservedUntil) === "past" ? "ended" : null,
     };
 
-    rowsBySpaceId.set(spaceId, row);
+    rows.push(row);
   }
-
-  const rows = Array.from(rowsBySpaceId.values());
   const statusRank = { active: 0, future: 1, past: 2 } as const;
 
   rows.sort((left, right) => {

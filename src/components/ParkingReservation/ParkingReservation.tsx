@@ -4,7 +4,7 @@ import "./ParkingReservation.css";
 interface ParkingReservationProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm?: (data: ReservationData) => void;
+  onConfirm?: (data: ReservationData) => void | Promise<void>;
   parkingLotName?: string;
   initialDurationHours?: number;
   initialStartTime?: string;
@@ -48,6 +48,7 @@ export default function ParkingReservation({
   const [date, setDate] = useState(getCurrentDate());
   const [startTime, setStartTime] = useState(initialStartTime);
   const [durationHours, setDurationHours] = useState(initialDurationHours);
+  const [submitting, setSubmitting] = useState(false);
   const durationOptions = Array.from({ length: 24 }, (_, index) => index + 1);
 
   // Reset to current date/time when popup opens
@@ -101,7 +102,7 @@ export default function ParkingReservation({
     input.focus();
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!date || !startTime) {
       alert("אנא מלא את כל השדות");
       return;
@@ -113,11 +114,19 @@ export default function ParkingReservation({
       durationHours,
     };
 
-    if (onConfirm) {
-      onConfirm(reservationData);
+    if (!onConfirm) {
+      onClose();
+      return;
     }
 
-    onClose();
+    setSubmitting(true);
+
+    try {
+      await onConfirm(reservationData);
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!isOpen) {
@@ -221,15 +230,17 @@ export default function ParkingReservation({
             className="pr-button pr-button--secondary"
             onClick={onClose}
             type="button"
+            disabled={submitting}
           >
             ביטול
           </button>
           <button
             className="pr-button pr-button--primary"
-            onClick={handleConfirm}
+            onClick={() => void handleConfirm()}
             type="button"
+            disabled={submitting}
           >
-            ✓ אישור הזמנה
+            {submitting ? "שומר..." : "✓ אישור הזמנה"}
           </button>
         </div>
       </div>

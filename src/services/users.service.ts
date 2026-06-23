@@ -63,6 +63,7 @@ const usersCol = "users";
 export type UserSettings = {
   displayName: string;
   email: string;
+  phoneNumber: string;
   licensePlate: string;
   defaultDurationHours: number;
   defaultSearchRadiusKm: number;
@@ -85,6 +86,7 @@ function getDefaultArrivalTime(): string {
 const DEFAULT_USER_SETTINGS: UserSettings = {
   displayName: "לקוח GetParking",
   email: "",
+  phoneNumber: "",
   licensePlate: "",
   defaultDurationHours: 2,
   defaultSearchRadiusKm: 250,
@@ -256,6 +258,7 @@ export async function getCurrentUserSettings(): Promise<UserSettings> {
   return {
     displayName: user?.name ?? DEFAULT_USER_SETTINGS.displayName,
     email: user?.email ?? auth.currentUser?.email ?? DEFAULT_USER_SETTINGS.email,
+    phoneNumber: user?.phoneNumber ?? DEFAULT_USER_SETTINGS.phoneNumber,
     licensePlate: user?.licensePlate ?? DEFAULT_USER_SETTINGS.licensePlate,
     defaultDurationHours:
       typeof user?.defaultDurationHours === "number"
@@ -304,6 +307,7 @@ export async function updateCurrentUserSettings(
 
   const payload: Partial<UserDoc> = {
     ...(patch.displayName !== undefined ? { name: patch.displayName.trim() || DEFAULT_USER_SETTINGS.displayName } : {}),
+    ...(patch.phoneNumber !== undefined ? { phoneNumber: patch.phoneNumber.trim() } : {}),
     ...(patch.licensePlate !== undefined
       ? { licensePlate: patch.licensePlate.trim().toUpperCase() }
       : {}),

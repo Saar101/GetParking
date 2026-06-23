@@ -123,9 +123,9 @@ export default function ParkingInfo({
 
   const handleReservationConfirm = async (data: ReservationData) => {
     setReservationData(data);
-    const currentUserDocId = await getCurrentBookingUserDocId();
 
     try {
+      const currentUserDocId = await getCurrentBookingUserDocId();
       const reservationResult = await reserveFirstAvailableParkingSpaceForCustomer(parkingSpace.id, {
         ...data,
         userDocId: currentUserDocId,

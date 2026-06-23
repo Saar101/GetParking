@@ -14,6 +14,7 @@ import OwnerLotsPopup from "../OwnerLotsPopup";
 import OwnerLotAnalyticsPopup from "../OwnerLotsPopup/OwnerLotAnalyticsPopup";
 import OwnerPricingPopup from "../OwnerPricingPopup/OwnerPricingPopup";
 import OwnerSideBar from "../OwnerSideBar/OwnerSideBar";
+import OwnerUserSettings from "../OwnerUserSettings/OwnerUserSettings";
 import "./OwnerMainScreen.css";
 
 type OwnerMainScreenProps = {
@@ -187,6 +188,7 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
   const recentlyUpdatedSpaceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLotsPopupOpen = activePage === "lots";
   const isPricingPopupOpen = activePage === "spaces";
+  const isOwnerSettingsOpen = activePage === "alerts";
   const [selectedAnalyticsLot, setSelectedAnalyticsLot] = useState<OwnedLotView | null>(null);
 
   const buildCustomerLookup = (users: UserListItem[]) => {
@@ -517,6 +519,10 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
     setActivePage("dashboard");
   };
 
+  const closeOwnerSettingsPopup = () => {
+    setActivePage("dashboard");
+  };
+
   const handlePricingSaved = (lotId: string, pricing: ParkingLotPricingPatch) => {
     setOwnedLots((currentLots) => currentLots.map((lot) => {
       if (lot.id !== lotId) {
@@ -760,6 +766,11 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
         }))}
         onClose={closePricingPopup}
         onSaved={handlePricingSaved}
+      />
+
+      <OwnerUserSettings
+        isOpen={isOwnerSettingsOpen}
+        onClose={closeOwnerSettingsPopup}
       />
 
       {selectedReservationSpace ? (

@@ -67,8 +67,8 @@ export default function OwnerSideBar({
   const navItems = [
     { id: 'dashboard', icon: '📊', label: 'לוח בקרה' },
     { id: 'lots', icon: '🏢', label: 'החניונים שלי' },
-    { id: 'spaces', icon: '🅿️', label: 'מקומות החניה' },
-    { id: 'alerts', icon: '🔔', label: 'התראות ועדכונים' },
+    { id: 'spaces', icon: '💸', label: 'מחירים ומבצעים' },
+    { id: 'alerts', icon: '⚙️', label: 'הגדרות' },
     { id: 'logout', icon: '🚪', label: 'התנתק' },
   ];
 
