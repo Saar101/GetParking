@@ -8,6 +8,7 @@ import {
   getEffectiveLotPricing,
   getPricingDurationLabel,
   getPricingTierLabel,
+  getSalePricingTiers,
   listParkingLots,
   type ParkingPriceTier,
   type ParkingLotDoc,
@@ -724,6 +725,16 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
               const distance = mapCenter ? distanceMeters(mapCenter, lot.location) : 0;
               const effectivePricing = getEffectiveLotPricing(lot);
               const activeSalePrice = getActiveSalePrice(lot);
+              const basePricingTiers = getBasePricingTiers(lot);
+              const salePricingTiers = getSalePricingTiers(lot);
+              const activeSalePricingTiers = getActiveSalePricingTiers(lot);
+
+              const toRecommendationTier = (tier: ParkingPriceTier) => ({
+                price: tier.price,
+                durationUnit: tier.durationUnit,
+                durationValue: tier.durationValue,
+                label: getPricingTierLabel(tier),
+              });
 
               return {
                 id: lot.id,
@@ -733,6 +744,11 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
                 pricingLabel: effectivePricing.label,
                 salePrice: activeSalePrice,
                 salePricingLabel: activeSalePrice === null ? null : getPricingDurationLabel(lot.activeSaleDurationUnit ?? lot.salePriceDurationUnit, lot.activeSaleDurationValue ?? lot.salePriceDurationValue),
+                basePricingTiers: basePricingTiers.map(toRecommendationTier),
+                salePricingTiers: salePricingTiers.length > 0 ? salePricingTiers.map(toRecommendationTier) : null,
+                activeSalePricingTiers: activeSalePricingTiers.length > 0 ? activeSalePricingTiers.map(toRecommendationTier) : null,
+                saleStartsAt: lot.saleStartsAt ?? null,
+                saleEndsAt: lot.saleEndsAt ?? null,
                 recommendationCount: lot.recommendationCount ?? 0,
                 available: true,
               };

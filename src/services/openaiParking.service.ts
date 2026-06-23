@@ -1,3 +1,10 @@
+export type RecommendationPricingTier = {
+  price: number;
+  durationUnit: "minutes" | "hours" | "day";
+  durationValue: number;
+  label?: string;
+};
+
 export type ParkingRecommendationLot = {
   id: string;
   name: string;
@@ -6,6 +13,11 @@ export type ParkingRecommendationLot = {
   pricingLabel: string;
   salePrice: number | null;
   salePricingLabel: string | null;
+  basePricingTiers?: RecommendationPricingTier[];
+  salePricingTiers?: RecommendationPricingTier[] | null;
+  activeSalePricingTiers?: RecommendationPricingTier[] | null;
+  saleStartsAt?: string | null;
+  saleEndsAt?: string | null;
   recommendationCount: number;
   available: boolean;
 };

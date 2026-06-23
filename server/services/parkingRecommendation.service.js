@@ -1,10 +1,82 @@
 import { callOpenAI } from './openaiClient.js';
 
+function normalizePricingTier(tier) {
+  if (!tier || typeof tier !== 'object') {
+    return null;
+  }
+
+  const price = Number(tier.price);
+  const durationUnit = tier.durationUnit === 'minutes' || tier.durationUnit === 'hours' || tier.durationUnit === 'day'
+    ? tier.durationUnit
+    : 'hours';
+  const durationValue = durationUnit === 'day'
+    ? 1
+    : Math.max(1, Math.round(Number(tier.durationValue ?? 1) || 1));
+
+  if (!Number.isFinite(price) || price <= 0) {
+    return null;
+  }
+
+  return {
+    price,
+    durationUnit,
+    durationValue,
+    label: typeof tier.label === 'string' && tier.label.trim() ? tier.label.trim() : null,
+  };
+}
+
+function normalizePricingTiers(tiers) {
+  if (!Array.isArray(tiers)) {
+    return [];
+  }
+
+  return tiers
+    .map(normalizePricingTier)
+    .filter(Boolean);
+}
+
+function formatTierLabel(tier) {
+  if (!tier) {
+    return '';
+  }
+
+  if (tier.label) {
+    return tier.label;
+  }
+
+  if (tier.durationUnit === 'day') {
+    return 'עד יום שלם';
+  }
+
+  if (tier.durationUnit === 'minutes') {
+    return `עד ${tier.durationValue} דקות`;
+  }
+
+  if (tier.durationValue === 1) {
+    return 'עד שעה';
+  }
+
+  return `עד ${tier.durationValue} שעות`;
+}
+
+function formatTierSummary(tiers) {
+  if (!tiers.length) {
+    return 'אין';
+  }
+
+  return tiers
+    .map((tier) => `₪${tier.price} ${formatTierLabel(tier)}`)
+    .join(', ');
+}
+
 function normalizeParkingLot(lot) {
   const distanceMeters = Number(lot?.distanceMeters ?? lot?.distance ?? lot?.distanceValue ?? 0);
   const price = Number(lot?.basePrice ?? lot?.price ?? 0);
   const salePrice = lot?.salePrice == null ? null : Number(lot.salePrice);
   const recommendationCount = Number(lot?.recommendationCount ?? lot?.recommendations ?? lot?.reviews ?? 0);
+  const basePricingTiers = normalizePricingTiers(lot?.basePricingTiers);
+  const salePricingTiers = normalizePricingTiers(lot?.salePricingTiers);
+  const activeSalePricingTiers = normalizePricingTiers(lot?.activeSalePricingTiers);
 
   return {
     id: String(lot?.id ?? lot?.parkingLotId ?? ''),
@@ -12,6 +84,13 @@ function normalizeParkingLot(lot) {
     distanceMeters: Number.isFinite(distanceMeters) ? distanceMeters : 0,
     price: Number.isFinite(price) ? price : 0,
     salePrice: Number.isFinite(salePrice) ? salePrice : null,
+    pricingLabel: typeof lot?.pricingLabel === 'string' ? lot.pricingLabel : null,
+    salePricingLabel: typeof lot?.salePricingLabel === 'string' ? lot.salePricingLabel : null,
+    basePricingTiers,
+    salePricingTiers,
+    activeSalePricingTiers,
+    saleStartsAt: lot?.saleStartsAt ?? null,
+    saleEndsAt: lot?.saleEndsAt ?? null,
     recommendationCount: Number.isFinite(recommendationCount) ? recommendationCount : 0,
     available: lot?.available !== false,
   };
@@ -29,14 +108,16 @@ function normalizeRecommendationPayload(payload) {
 
 function buildPrompt(normalizedPayload) {
   const examples = normalizedPayload.parkingLots
-    .map((p) => `- id: ${p.id}, name: ${p.name}, distanceMeters: ${p.distanceMeters}, price: ${p.price}, salePrice: ${p.salePrice ?? 'null'}, recommendationCount: ${p.recommendationCount}, available: ${p.available}`)
+    .map((p) => `- id: ${p.id}, name: ${p.name}, distanceMeters: ${p.distanceMeters}, price: ${p.price}, pricingLabel: ${p.pricingLabel ?? 'null'}, salePrice: ${p.salePrice ?? 'null'}, salePricingLabel: ${p.salePricingLabel ?? 'null'}, basePricingTiers: ${formatTierSummary(p.basePricingTiers)}, salePricingTiers: ${formatTierSummary(p.salePricingTiers)}, activeSalePricingTiers: ${formatTierSummary(p.activeSalePricingTiers)}, saleWindow: ${p.saleStartsAt ?? 'null'} -> ${p.saleEndsAt ?? 'null'}, recommendationCount: ${p.recommendationCount}, available: ${p.available}`)
     .join('\n');
 
-  return `תפקידך: לבחור את החניון הטוב ביותר מתוך רשימת חניונים לפי המרחק, מחיר, הנחה (salePrice) ומספר המלצות.
+  return `תפקידך: לבחור את החניון הטוב ביותר מתוך רשימת חניונים לפי המרחק, כל מדרגות המחיר, מדרגות המבצע, זמינות ומספר המלצות.
 
 חניונים:\n${examples}
 
-כלל בדיקה מומלצים: נמוך מרחק, מחיר נמוך, הנחה עדיפה, מספר המלצות גבוה.
+כללי בדיקה מומלצים: נמוך מרחק, מחיר נמוך, מבצע אמיתי עדיף רק בטווחים שהוא מכסה, מספר המלצות גבוה.
+
+חשוב: אם יש basePricingTiers / salePricingTiers / activeSalePricingTiers, אלה הנתונים העיקריים לחישוב. אל תסתמך רק על price או salePrice אם יש מדרגות מפורטות.
 
 אם יש חניון לא זמין, יש להעדיף חניון זמין אחר.
 
@@ -48,7 +129,7 @@ function buildRecommendationMessages(normalizedPayload) {
   return [
     {
       role: 'system',
-      content: 'אתה עוזר חכם לבחירת חניונים. תחזיר JSON בלבד עם recommendedLotId, explanation, source. source חייב להיות openai.',
+      content: 'אתה עוזר חכם לבחירת חניונים. תחזיר אובייקט JSON תקין בלבד עם שני שדות בדיוק: recommendedLotId, explanation.',
     },
     {
       role: 'user',
@@ -65,7 +146,7 @@ function buildFollowupMessages(payload, parsedConversation) {
       : [];
 
   const parkingLotSummary = parkingLots
-    .map((lot) => `- ${lot.id}: ${lot.name}, מרחק ${lot.distanceMeters} מ', מחיר ₪${lot.price}, הנחה ${lot.salePrice ?? 'אין'}, המלצות ${lot.recommendationCount}, זמין ${lot.available ? 'כן' : 'לא'}`)
+    .map((lot) => `- ${lot.id}: ${lot.name}, מרחק ${lot.distanceMeters} מ', מחיר מוביל ₪${lot.price} ${lot.pricingLabel ?? ''}, מבצע מוביל ${lot.salePrice != null ? `₪${lot.salePrice} ${lot.salePricingLabel ?? ''}` : 'אין'}, מדרגות בסיס: ${formatTierSummary(lot.basePricingTiers)}, מדרגות מבצע: ${formatTierSummary(lot.salePricingTiers)}, מדרגות מבצע פעילות: ${formatTierSummary(lot.activeSalePricingTiers)}, חלון מבצע: ${lot.saleStartsAt ?? 'null'} -> ${lot.saleEndsAt ?? 'null'}, המלצות ${lot.recommendationCount}, זמין ${lot.available ? 'כן' : 'לא'}`)
     .join('\n');
 
   return [
@@ -115,10 +196,34 @@ function tryParseJSON(text) {
   }
 }
 
+function normalizeAIRecommendation(parsed) {
+  if (!parsed || typeof parsed !== 'object') {
+    return null;
+  }
+
+  const recommendedLotId = parsed.recommendedLotId ?? parsed.lotId ?? parsed.id ?? null;
+  const explanation = typeof parsed.explanation === 'string'
+    ? parsed.explanation
+    : typeof parsed.reason === 'string'
+      ? parsed.reason
+      : typeof parsed.message === 'string'
+        ? parsed.message
+        : null;
+
+  if (!recommendedLotId) {
+    return null;
+  }
+
+  return {
+    recommendedLotId: String(recommendedLotId),
+    explanation: explanation ?? 'התקבלה המלצה מהמודל',
+  };
+}
+
 function scoreParkingLot(lot) {
   const distancePenalty = Math.max(0, Number(lot.distanceMeters) || 0) * 0.03;
   const pricePenalty = Math.max(0, Number(lot.price) || 0) * 1.2;
-  const saleBonus = lot.salePrice != null ? 8 : 0;
+  const saleBonus = Array.isArray(lot.activeSalePricingTiers) && lot.activeSalePricingTiers.length > 0 ? 8 : lot.salePrice != null ? 6 : 0;
   const recommendationBonus = Math.max(0, Number(lot.recommendationCount) || 0) * 0.4;
   const availabilityPenalty = lot.available ? 0 : 100;
 
@@ -156,6 +261,13 @@ function localRank(parkingLots, sourceReason = 'local_rank') {
       distanceMeters: lot.distanceMeters,
       price: lot.price,
       salePrice: lot.salePrice,
+      pricingLabel: lot.pricingLabel,
+      salePricingLabel: lot.salePricingLabel,
+      basePricingTiers: lot.basePricingTiers,
+      salePricingTiers: lot.salePricingTiers,
+      activeSalePricingTiers: lot.activeSalePricingTiers,
+      saleStartsAt: lot.saleStartsAt,
+      saleEndsAt: lot.saleEndsAt,
       recommendationCount: lot.recommendationCount,
       available: lot.available,
     })),
@@ -182,13 +294,17 @@ export async function getRecommendation(payload) {
       lotCount: parkingLots.length,
       model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
     });
-    const ai = await callOpenAI(buildRecommendationMessages(normalizedPayload));
+    const ai = await callOpenAI(
+      buildRecommendationMessages(normalizedPayload),
+      process.env.OPENAI_MODEL || 'gpt-4o-mini',
+      { responseFormat: { type: 'json_object' } }
+    );
     const text = ai?.choices?.[0]?.message?.content ?? ai?.choices?.[0]?.text ?? JSON.stringify(ai);
     console.info('[GetParking Server] received recommendation response from OpenAI', {
       hasText: Boolean(text),
       textPreview: String(text).slice(0, 160),
     });
-    const parsed = tryParseJSON(text);
+    const parsed = normalizeAIRecommendation(tryParseJSON(text));
     if (parsed && parsed.recommendedLotId) {
       console.info('[GetParking Server] parsed OpenAI recommendation successfully', {
         recommendedLotId: parsed.recommendedLotId,
@@ -205,6 +321,13 @@ export async function getRecommendation(payload) {
           distanceMeters: lot.distanceMeters,
           price: lot.price,
           salePrice: lot.salePrice,
+          pricingLabel: lot.pricingLabel,
+          salePricingLabel: lot.salePricingLabel,
+          basePricingTiers: lot.basePricingTiers,
+          salePricingTiers: lot.salePricingTiers,
+          activeSalePricingTiers: lot.activeSalePricingTiers,
+          saleStartsAt: lot.saleStartsAt,
+          saleEndsAt: lot.saleEndsAt,
           recommendationCount: lot.recommendationCount,
           available: lot.available,
         })),
