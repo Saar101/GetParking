@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   getActiveSalePrice,
   getActiveSalePricingTiers,
@@ -58,7 +58,23 @@ type PricingFormState = {
   saleEndsAt: string;
 };
 
+type TierPriceType = "base" | "sale";
+
+type TierAnimationState = {
+  entering: string[];
+  leaving: string[];
+};
+
+type ActionAnimationState = {
+  save: boolean;
+  clearPromotion: boolean;
+};
+
 let nextTierId = 0;
+const TIER_ANIMATION_MS = 280;
+const ACTION_BUTTON_ANIMATION_MS = 520;
+const LOT_SWITCH_ANIMATION_MS = 360;
+const SAVE_SUCCESS_POPUP_MS = 2200;
 
 const durationUnitOptions: Array<{ value: PricingDurationUnit; label: string }> = [
   { value: "minutes", label: "דקות" },
@@ -217,6 +233,18 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
   const [loadingLot, setLoadingLot] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [isLotSwitchAnimating, setIsLotSwitchAnimating] = useState(false);
+  const [isSaveSuccessPopupVisible, setIsSaveSuccessPopupVisible] = useState(false);
+  const [actionAnimations, setActionAnimations] = useState<ActionAnimationState>({
+    save: false,
+    clearPromotion: false,
+  });
+  const [tierAnimations, setTierAnimations] = useState<Record<TierPriceType, TierAnimationState>>({
+    base: { entering: [], leaving: [] },
+    sale: { entering: [], leaving: [] },
+  });
+  const lastAnimatedLotIdRef = useRef<string | null>(null);
+  const saveSuccessPopupTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -233,6 +261,34 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
   }, [isOpen, lots]);
 
   const selectedLot = useMemo(() => lots.find((lot) => lot.id === selectedLotId) ?? null, [lots, selectedLotId]);
+
+  useEffect(() => {
+    if (!isOpen || !selectedLotId) {
+      setIsLotSwitchAnimating(false);
+      lastAnimatedLotIdRef.current = null;
+      return;
+    }
+
+    if (lastAnimatedLotIdRef.current === null) {
+      lastAnimatedLotIdRef.current = selectedLotId;
+      return;
+    }
+
+    if (lastAnimatedLotIdRef.current === selectedLotId) {
+      return;
+    }
+
+    lastAnimatedLotIdRef.current = selectedLotId;
+    setIsLotSwitchAnimating(true);
+
+    const timeoutId = window.setTimeout(() => {
+      setIsLotSwitchAnimating(false);
+    }, LOT_SWITCH_ANIMATION_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isOpen, selectedLotId]);
 
   useEffect(() => {
     if (!isOpen || !selectedLot) {
@@ -281,6 +337,14 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
     setFormState(buildFormState(selectedLotSnapshot ?? selectedLot));
     setError("");
     setSuccessMessage("");
+    setActionAnimations({
+      save: false,
+      clearPromotion: false,
+    });
+    setTierAnimations({
+      base: { entering: [], leaving: [] },
+      sale: { entering: [], leaving: [] },
+    });
   }, [selectedLotId, selectedLot, selectedLotSnapshot]);
 
   useEffect(() => {
@@ -288,8 +352,26 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
       setError("");
       setSuccessMessage("");
       setSaving(false);
+      setIsLotSwitchAnimating(false);
+      setIsSaveSuccessPopupVisible(false);
+      setActionAnimations({
+        save: false,
+        clearPromotion: false,
+      });
+      setTierAnimations({
+        base: { entering: [], leaving: [] },
+        sale: { entering: [], leaving: [] },
+      });
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (saveSuccessPopupTimeoutRef.current !== null) {
+        window.clearTimeout(saveSuccessPopupTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!isOpen) {
     return null;
@@ -304,6 +386,73 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
       ...current,
       [field]: value,
     }));
+  };
+
+  const triggerActionAnimation = (action: keyof ActionAnimationState) => {
+    setActionAnimations((current) => ({
+      ...current,
+      [action]: true,
+    }));
+
+    window.setTimeout(() => {
+      setActionAnimations((current) => ({
+        ...current,
+        [action]: false,
+      }));
+    }, ACTION_BUTTON_ANIMATION_MS);
+  };
+
+  const showSaveSuccessPopup = () => {
+    if (saveSuccessPopupTimeoutRef.current !== null) {
+      window.clearTimeout(saveSuccessPopupTimeoutRef.current);
+    }
+
+    setIsSaveSuccessPopupVisible(true);
+    saveSuccessPopupTimeoutRef.current = window.setTimeout(() => {
+      setIsSaveSuccessPopupVisible(false);
+      saveSuccessPopupTimeoutRef.current = null;
+    }, SAVE_SUCCESS_POPUP_MS);
+  };
+
+  const markTierEntering = (priceType: TierPriceType, tierId: string) => {
+    setTierAnimations((current) => ({
+      ...current,
+      [priceType]: {
+        ...current[priceType],
+        entering: [...current[priceType].entering.filter((id) => id !== tierId), tierId],
+      },
+    }));
+
+    window.setTimeout(() => {
+      setTierAnimations((current) => ({
+        ...current,
+        [priceType]: {
+          ...current[priceType],
+          entering: current[priceType].entering.filter((id) => id !== tierId),
+        },
+      }));
+    }, TIER_ANIMATION_MS);
+  };
+
+  const markTierLeaving = (priceType: TierPriceType, tierId: string, onComplete: () => void) => {
+    setTierAnimations((current) => ({
+      ...current,
+      [priceType]: {
+        entering: current[priceType].entering.filter((id) => id !== tierId),
+        leaving: [...current[priceType].leaving.filter((id) => id !== tierId), tierId],
+      },
+    }));
+
+    window.setTimeout(() => {
+      onComplete();
+      setTierAnimations((current) => ({
+        ...current,
+        [priceType]: {
+          ...current[priceType],
+          leaving: current[priceType].leaving.filter((id) => id !== tierId),
+        },
+      }));
+    }, TIER_ANIMATION_MS);
   };
 
   const handleTierFieldChange = (priceType: "base" | "sale", tierId: string, field: keyof Omit<EditablePricingTier, "id">, value: string) => {
@@ -336,39 +485,60 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
   };
 
   const handleAddTier = (priceType: "base" | "sale") => {
+    const nextTier = createEditableTier(
+      (() => {
+        const key = priceType === "base" ? "basePricingTiers" : "salePricingTiers";
+        const previousTier = formState[key][formState[key].length - 1];
+
+        return {
+          durationUnit: previousTier?.durationUnit ?? "hours",
+          durationValue: previousTier ? Number(normalizeDurationValue(previousTier.durationUnit, previousTier.durationValue)) : 1,
+        };
+      })()
+    );
+
     setFormState((current) => {
       const key = priceType === "base" ? "basePricingTiers" : "salePricingTiers";
-      const previousTier = current[key][current[key].length - 1];
 
       return {
         ...current,
         [key]: [
           ...current[key],
-          createEditableTier({
-            durationUnit: previousTier?.durationUnit ?? "hours",
-            durationValue: previousTier ? Number(normalizeDurationValue(previousTier.durationUnit, previousTier.durationValue)) : 1,
-          }),
+          nextTier,
         ],
       };
     });
+
+    markTierEntering(priceType, nextTier.id);
   };
 
   const handleRemoveTier = (priceType: "base" | "sale", tierId: string) => {
-    setFormState((current) => {
-      const key = priceType === "base" ? "basePricingTiers" : "salePricingTiers";
-      const nextTiers = current[key].filter((tier) => tier.id !== tierId);
+    markTierLeaving(priceType, tierId, () => {
+      let replacementTierId: string | null = null;
 
-      if (priceType === "base" && nextTiers.length === 0) {
+      setFormState((current) => {
+        const key = priceType === "base" ? "basePricingTiers" : "salePricingTiers";
+        const nextTiers = current[key].filter((tier) => tier.id !== tierId);
+
+        if (nextTiers.length > 0) {
+          return {
+            ...current,
+            [key]: nextTiers,
+          };
+        }
+
+        const replacementTier = createEditableTier({ durationUnit: "hours", durationValue: 1 });
+        replacementTierId = replacementTier.id;
+
         return {
           ...current,
-          basePricingTiers: [createEditableTier({ durationUnit: "hours", durationValue: 1 })],
+          [key]: [replacementTier],
         };
-      }
+      });
 
-      return {
-        ...current,
-        [key]: nextTiers.length > 0 ? nextTiers : [createEditableTier({ durationUnit: "hours", durationValue: 1 })],
-      };
+      if (replacementTierId) {
+        markTierEntering(priceType, replacementTierId);
+      }
     });
   };
 
@@ -392,6 +562,8 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
     if (!sourceLot) {
       return;
     }
+
+    triggerActionAnimation("save");
 
     let nextBasePricingTiers: ParkingPriceTier[];
     let nextSalePricingTiers: ParkingPriceTier[];
@@ -441,6 +613,7 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
       onSaved(selectedLot.id, pricingPatch);
       setSelectedLotSnapshot(await loadOwnerPricingLot(sourceLot));
       setSuccessMessage("המחירים והמבצע נשמרו בהצלחה.");
+      showSaveSuccessPopup();
     } catch (saveError) {
       const message = saveError instanceof Error ? saveError.message : String(saveError);
       setError(message || "לא הצלחנו לשמור את המחירים כרגע.");
@@ -453,6 +626,8 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
     if (!sourceLot) {
       return;
     }
+
+    triggerActionAnimation("clearPromotion");
 
     const pricingPatch: ParkingLotPricingPatch = {
       basePricingTiers: buildPricingTiers(formState.basePricingTiers, "מחיר"),
@@ -487,6 +662,18 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
   return (
     <div className="owner-pricing-popup__overlay" role="presentation" onClick={onClose}>
       <div className="owner-pricing-popup" role="dialog" aria-modal="true" aria-labelledby="owner-pricing-popup-title" onClick={(event) => event.stopPropagation()}>
+        {isSaveSuccessPopupVisible ? (
+          <div className="owner-pricing-popup__save-success-popup" role="status" aria-live="polite">
+            <div className="owner-pricing-popup__save-success-icon" aria-hidden="true">
+              <span>✓</span>
+            </div>
+            <div className="owner-pricing-popup__save-success-content">
+              <strong>המחירים נשמרו</strong>
+              <span>המחירים נשמרו ופורסמו המבצעים בהצלחה</span>
+            </div>
+          </div>
+        ) : null}
+
         <div className="owner-pricing-popup__header">
           <div>
             <p className="owner-pricing-popup__eyebrow">Pricing & promotions</p>
@@ -517,7 +704,7 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
             </div>
           </aside>
 
-          <section className="owner-pricing-popup__editor">
+          <section className={`owner-pricing-popup__editor ${isLotSwitchAnimating ? "owner-pricing-popup__editor--switching" : ""}`}>
             {selectedLot ? (
               <>
                 <div className="owner-pricing-popup__summary-grid">
@@ -551,7 +738,7 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
 
                   <div className="owner-pricing-popup__tier-list">
                     {formState.basePricingTiers.map((tier, index) => (
-                      <div key={tier.id} className="owner-pricing-popup__tier-card">
+                      <div key={tier.id} className={`owner-pricing-popup__tier-card ${tierAnimations.base.entering.includes(tier.id) ? "owner-pricing-popup__tier-card--entering" : ""} ${tierAnimations.base.leaving.includes(tier.id) ? "owner-pricing-popup__tier-card--leaving" : ""}`}>
                         <div className="owner-pricing-popup__tier-index">מדרגה {index + 1}</div>
                         <label className="owner-pricing-popup__field">
                           <span>מחיר</span>
@@ -595,21 +782,21 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
                   </div>
                 </section>
 
-                <section className="owner-pricing-popup__tier-section">
-                  <div className="owner-pricing-popup__tier-header">
+                <section className="owner-pricing-popup__tier-section owner-pricing-popup__tier-section--sale">
+                  <div className="owner-pricing-popup__tier-header owner-pricing-popup__tier-header--sale">
                     <div>
                       <h3>מדרגות מבצע</h3>
                       <p>אפשר להגדיר מבצע נפרד לכל טווח זמן. השאר את כל המחירים ריקים אם אין מבצע.</p>
                     </div>
-                    <button type="button" className="owner-pricing-popup__secondary" onClick={() => handleAddTier("sale")} disabled={saving}>
+                    <button type="button" className="owner-pricing-popup__secondary owner-pricing-popup__secondary--sale" onClick={() => handleAddTier("sale")} disabled={saving}>
                       הוסף מדרגת מבצע
                     </button>
                   </div>
 
                   <div className="owner-pricing-popup__tier-list">
                     {formState.salePricingTiers.map((tier, index) => (
-                      <div key={tier.id} className="owner-pricing-popup__tier-card">
-                        <div className="owner-pricing-popup__tier-index">מבצע {index + 1}</div>
+                      <div key={tier.id} className={`owner-pricing-popup__tier-card owner-pricing-popup__tier-card--sale ${tierAnimations.sale.entering.includes(tier.id) ? "owner-pricing-popup__tier-card--entering" : ""} ${tierAnimations.sale.leaving.includes(tier.id) ? "owner-pricing-popup__tier-card--leaving" : ""}`}>
+                        <div className="owner-pricing-popup__tier-index owner-pricing-popup__tier-index--sale">מבצע {index + 1}</div>
                         <label className="owner-pricing-popup__field">
                           <span>מחיר מבצע</span>
                           <input
@@ -642,9 +829,9 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
                             />
                           </div>
                         </div>
-                        <div className="owner-pricing-popup__tier-footer">
+                        <div className="owner-pricing-popup__tier-footer owner-pricing-popup__tier-footer--sale">
                           <small>{tier.price ? `יוצג: ₪${tier.price} ${getPricingTierLabel({ durationUnit: tier.durationUnit, durationValue: Number(normalizeDurationValue(tier.durationUnit, tier.durationValue)) })}` : "השאר ריק אם אין צורך במדרגה הזאת"}</small>
-                          <button type="button" className="owner-pricing-popup__ghost" onClick={() => handleRemoveTier("sale", tier.id)} disabled={saving}>
+                          <button type="button" className="owner-pricing-popup__ghost owner-pricing-popup__ghost--sale" onClick={() => handleRemoveTier("sale", tier.id)} disabled={saving}>
                             הסר מדרגה
                           </button>
                         </div>
@@ -682,10 +869,10 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
                 {successMessage ? <p className="owner-pricing-popup__message owner-pricing-popup__message--success">{successMessage}</p> : null}
 
                 <div className="owner-pricing-popup__actions">
-                  <button type="button" className="owner-pricing-popup__secondary" onClick={handleClearPromotion} disabled={saving}>
+                  <button type="button" className={`owner-pricing-popup__secondary ${actionAnimations.clearPromotion ? "owner-pricing-popup__action-button--animating owner-pricing-popup__action-button--animating-secondary" : ""}`} onClick={handleClearPromotion} disabled={saving}>
                     הסר מבצע
                   </button>
-                  <button type="button" className="owner-pricing-popup__primary" onClick={() => void handleSave()} disabled={saving}>
+                  <button type="button" className={`owner-pricing-popup__primary ${actionAnimations.save ? "owner-pricing-popup__action-button--animating owner-pricing-popup__action-button--animating-primary" : ""}`} onClick={() => void handleSave()} disabled={saving}>
                     {saving ? "שומר..." : "שמור מחירים ופרסם מבצע"}
                   </button>
                 </div>
