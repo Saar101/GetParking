@@ -14,11 +14,13 @@ import "./AuthScreen.css";
 type AuthScreenProps = {
   title?: string;
   subtitle?: string;
+  blockedMessage?: string;
 };
 
 export default function AuthScreen({
   title = "GetParking",
   subtitle = "התחברו כדי להמשיך לחיפוש, הזמנה וניהול חניות",
+  blockedMessage,
 }: AuthScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -163,6 +165,7 @@ export default function AuthScreen({
         authUid: userCredential.user.uid,
         licensePlate: signupData.normalizedPlate,
         phoneNumber: signupData.normalizedPhone,
+        lastSeenAt: new Date().toISOString(),
         bookingHistory: [],
         parkingLotId: null,
         parkingSpaceId: null,
@@ -193,6 +196,14 @@ export default function AuthScreen({
     <main className="auth-screen">
       <div className="auth-screen__background auth-screen__background--one" />
       <div className="auth-screen__background auth-screen__background--two" />
+
+      {blockedMessage ? (
+        <div className="auth-blocked-popup" role="alert" aria-live="assertive" aria-labelledby="auth-blocked-title">
+          <p className="auth-blocked-popup__eyebrow">Access blocked</p>
+          <h2 id="auth-blocked-title">המשתמש הזה מושבת</h2>
+          <p className="auth-blocked-popup__message">משתמש זה מושבת עד להודעה חדשה ממנהל המערכת.</p>
+        </div>
+      ) : null}
 
       <img src={appTitleLogo} alt="GetParking" className="auth-screen__logo" />
 

@@ -4,6 +4,7 @@ import "./App.css";
 
 import { auth } from "./firebase";
 import AuthScreen from "./components/AuthScreen/AuthScreen";
+import AdminMainScreen from "./components/AdminMainScreen/AdminMainScreen";
 import CustomerMainScreen from "./components/CustomerMainScreen/CustomerMainScreen";
 import OwnerMainScreen from "./components/OwnerMainScreen";
 import { getCurrentUserRole, type UserRole } from "./services/users.service";
@@ -13,6 +14,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [authBlockedMessage, setAuthBlockedMessage] = useState<string | null>(null);
   const logoutTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -24,6 +26,8 @@ export default function App() {
       setAuthReady(true);
 
       if (nextUser) {
+        setAuthBlockedMessage(null);
+
         if (logoutTimerRef.current !== null) {
           window.clearTimeout(logoutTimerRef.current);
           logoutTimerRef.current = null;
@@ -36,8 +40,17 @@ export default function App() {
               setUserRole(role ?? "customer");
             }
           })
-          .catch(() => {
+          .catch((error: unknown) => {
             if (active) {
+              const message = error instanceof Error ? error.message : "";
+
+              if (message === "USER_DISABLED") {
+                setUserRole(null);
+                setAuthBlockedMessage("החשבון הזה מושבת כרגע. יש לפנות לאדמין המערכת כדי להפעיל אותו מחדש.");
+                void signOut(auth);
+                return;
+              }
+
               setUserRole("customer");
             }
           });
@@ -80,7 +93,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <AuthScreen />;
+    return <AuthScreen blockedMessage={authBlockedMessage ?? undefined} />;
   }
 
   return (
@@ -93,6 +106,11 @@ export default function App() {
       ) : null}
       {userRole === "owner" ? (
         <OwnerMainScreen
+          userName={user.displayName ?? user.email ?? "משתמש"}
+          onLogout={handleLogout}
+        />
+      ) : userRole === "admin" ? (
+        <AdminMainScreen
           userName={user.displayName ?? user.email ?? "משתמש"}
           onLogout={handleLogout}
         />

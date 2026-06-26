@@ -1,5 +1,5 @@
 import { db } from "../firebase";
-import { collection, doc, getDoc, getDocs, increment, setDoc, updateDoc } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, increment, query, setDoc, updateDoc, where } from "firebase/firestore";
 import type { UserDoc, BookingHistorySnapshot } from "./users.service";
 
 export type ParkingLotDoc = {
@@ -98,6 +98,15 @@ export async function updateParkingLot(
   patch: Partial<ParkingLotDoc>
 ) {
   await updateDoc(doc(db, lotsCol, lotId), patch as any);
+}
+
+export async function deleteParkingLot(lotId: string) {
+  const lotSpacesSnapshot = await getDocs(
+    query(collection(db, "parkingSpaces"), where("parkingLotId", "==", lotId))
+  );
+
+  await Promise.all(lotSpacesSnapshot.docs.map((spaceDoc) => deleteDoc(doc(db, "parkingSpaces", spaceDoc.id))));
+  await deleteDoc(doc(db, lotsCol, lotId));
 }
 
 export async function setLotSalePrice(lotId: string, salePrice: number | null) {
