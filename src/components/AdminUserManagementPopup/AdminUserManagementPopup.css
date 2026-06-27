@@ -8,6 +8,11 @@
   padding: 24px;
   background: rgba(3, 23, 35, 0.48);
   backdrop-filter: blur(10px);
+  animation: admin-user-popup-backdrop-in 280ms ease both;
+}
+
+.admin-user-popup__backdrop--closing {
+  animation: admin-user-popup-backdrop-out 280ms ease both;
 }
 
 .admin-user-popup {
@@ -22,6 +27,12 @@
   box-shadow: 0 34px 90px rgba(8, 37, 56, 0.28);
   padding: 28px;
   text-align: right;
+  transform-origin: top center;
+  animation: admin-user-popup-in 280ms cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+}
+
+.admin-user-popup--closing {
+  animation: admin-user-popup-out 280ms cubic-bezier(0.55, 0.06, 0.68, 0.19) both;
 }
 
 .admin-user-popup__header {
@@ -294,6 +305,45 @@
 .admin-user-popup__confirm-button--danger {
   background: linear-gradient(135deg, #c43232 0%, #ef6a6a 100%);
   color: #ffffff;
+}
+
+@keyframes admin-user-popup-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes admin-user-popup-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes admin-user-popup-in {
+  0% {
+    opacity: 0;
+    transform: translateY(26px) scale(0.94);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1.015);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes admin-user-popup-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
 }
 
 @media (max-width: 920px) {

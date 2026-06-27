@@ -17,6 +17,8 @@ type AdminSystemActivityPopupProps = {
   error: string;
 };
 
+const POPUP_ANIMATION_MS = 280;
+
 const roleOptions: Array<{ value: ActivityRoleFilter; label: string }> = [
   { value: "both", label: "לקוחות ובעלי חניונים" },
   { value: "customer", label: "לקוחות בלבד" },
@@ -100,6 +102,29 @@ export default function AdminSystemActivityPopup({
   const [totalMatchingUsers, setTotalMatchingUsers] = useState(0);
   const [usersWithActivity, setUsersWithActivity] = useState(0);
   const [recentUsers, setRecentUsers] = useState<RecentActivityUser[]>([]);
+  const [isRendered, setIsRendered] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+
+    if (isOpen) {
+      setIsRendered(true);
+      setIsClosing(false);
+    } else if (isRendered) {
+      setIsClosing(true);
+      closeTimer = setTimeout(() => {
+        setIsRendered(false);
+        setIsClosing(false);
+      }, POPUP_ANIMATION_MS);
+    }
+
+    return () => {
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+      }
+    };
+  }, [isOpen, isRendered]);
 
   useEffect(() => {
     if (!isOpen || !activityUsers.length) {
@@ -117,14 +142,18 @@ export default function AdminSystemActivityPopup({
     setRecentUsers(summary.recentUsers);
   }, [activityUsers, isOpen, roleFilter, timeFilter]);
 
-  if (!isOpen) {
+  if (!isRendered) {
     return null;
   }
 
   return (
-    <div className="admin-system-popup__backdrop" role="presentation" onClick={onClose}>
+    <div
+      className={`admin-system-popup__backdrop ${isClosing ? "admin-system-popup__backdrop--closing" : ""}`}
+      role="presentation"
+      onClick={onClose}
+    >
       <section
-        className="admin-system-popup"
+        className={`admin-system-popup ${isClosing ? "admin-system-popup--closing" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-system-popup-title"

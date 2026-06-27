@@ -20,6 +20,8 @@ type AdminParkingManagementPopupProps = {
   users: UserListItem[];
 };
 
+const POPUP_ANIMATION_MS = 280;
+
 function getEffectiveStatus(space: ParkingSpaceView): SpaceStatus {
   if (space.status !== "reserved" || !space.reservation?.reservedFrom || !space.reservation?.reservedUntil) {
     return space.status;
@@ -77,6 +79,29 @@ export default function AdminParkingManagementPopup({
 }: AdminParkingManagementPopupProps) {
   const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isRendered, setIsRendered] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+
+    if (isOpen) {
+      setIsRendered(true);
+      setIsClosing(false);
+    } else if (isRendered) {
+      setIsClosing(true);
+      closeTimer = setTimeout(() => {
+        setIsRendered(false);
+        setIsClosing(false);
+      }, POPUP_ANIMATION_MS);
+    }
+
+    return () => {
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+      }
+    };
+  }, [isOpen, isRendered]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -152,14 +177,18 @@ export default function AdminParkingManagementPopup({
     [lotsWithStats, selectedLotId]
   );
 
-  if (!isOpen) {
+  if (!isRendered) {
     return null;
   }
 
   return (
-    <div className="admin-parking-popup__overlay" role="presentation" onClick={onClose}>
+    <div
+      className={`admin-parking-popup__overlay ${isClosing ? "admin-parking-popup__overlay--closing" : ""}`}
+      role="presentation"
+      onClick={onClose}
+    >
       <section
-        className="admin-parking-popup"
+        className={`admin-parking-popup ${isClosing ? "admin-parking-popup--closing" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-parking-popup-title"

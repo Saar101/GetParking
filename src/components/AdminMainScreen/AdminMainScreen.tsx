@@ -8,6 +8,7 @@ import AdminParkingManagementPopup from "../AdminParkingManagementPopup/AdminPar
 import AdminUserManagementPopup from "../AdminUserManagementPopup/AdminUserManagementPopup";
 import AdminSystemActivityPopup from "../AdminSystemActivityPopup/AdminSystemActivityPopup";
 import LogoutConfirmPopup from "../LogoutConfirmPopup/LogoutConfirmPopup";
+import UserSettings from "../UserSettings/UserSettings";
 import { subscribeToRealtimeUsers, type UserListItem } from "../../services/users.service";
 import { subscribeToRealtimeParkingLots, subscribeToRealtimeParkingSpaces } from "../../services/parkingSpaces.service";
 import "./AdminMainScreen.css";
@@ -19,19 +20,32 @@ type AdminMainScreenProps = {
 
 const adminModules = [
   {
-    title: "ניהול משתמשים",
-    description: "גישה מרוכזת ללקוחות, בעלי חניונים והרשאות מערכת.",
-    status: "מוכן לשלב הבא",
+    action: "users",
+    icon: "👥",
+    title: "שליטה על משתמשים",
+    description: "יצירת משתמשים, השבתה והפעלה מחדש, קידום למנהלי חניון וניהול פרטי חשבון.",
+    accent: "users",
   },
   {
-    title: "ניהול חניונים",
-    description: "שליטה רוחבית בחניונים, מחירים, זמינות ומבצעים.",
-    status: "מוכן להרחבה",
+    action: "lots",
+    icon: "🏢",
+    title: "ניהול חניונים ומבנה בעלות",
+    description: "יצירת חניונים לפי כתובת, שיוך וביטול שיוך לבעלים, מחיקת חניון ומעקב על מצב התפוסה.",
+    accent: "lots",
   },
   {
-    title: "בקרת מערכת",
-    description: "מקום למעקב אחרי אירועים, עומסים, ותקלות רוחביות במערכת.",
-    status: "בהקמה",
+    action: "system",
+    icon: "📈",
+    title: "בקרת מערכת חיה",
+    description: "מעקב אחרי פעילות משתמשים לפי זמנים, פילוח לפי סוגי משתמשים, ותמונת מצב רחבה של המערכת.",
+    accent: "system",
+  },
+  {
+    action: "settings",
+    icon: "⚙️",
+    title: "הגדרות ותפעול מהיר",
+    description: "גישה מהירה להגדרות חשבון האדמין ולכלי ניהול שנועדו לשמור על שליטה יומיומית פשוטה וברורה.",
+    accent: "settings",
   },
 ];
 
@@ -57,6 +71,11 @@ const adminPageContent: Record<Exclude<AdminSidebarPageId, "logout">, { eyebrow:
     title: "בקרת מערכת ותמונת מצב",
     description: "האיזור הזה ישמש בהמשך לניטור מערכת, חריגות, עומסים, ואינדיקציות תפעוליות רחבות.",
   },
+  settings: {
+    eyebrow: "User settings",
+    title: "הגדרות משתמש",
+    description: "כאן אפשר לנהל את הגדרות המשתמש האישיות של חשבון האדמין, באותו שלד עבודה הקיים אצל מנהל החניון.",
+  },
 };
 
 export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenProps) {
@@ -64,6 +83,7 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
   const [showParkingManagementPopup, setShowParkingManagementPopup] = useState(false);
   const [showUserManagementPopup, setShowUserManagementPopup] = useState(false);
   const [showSystemActivityPopup, setShowSystemActivityPopup] = useState(false);
+  const [showUserSettingsPopup, setShowUserSettingsPopup] = useState(false);
   const [activePage, setActivePage] = useState<Exclude<AdminSidebarPageId, "logout">>("dashboard");
   const [activityUsers, setActivityUsers] = useState<UserListItem[]>([]);
   const [activityUsersLoading, setActivityUsersLoading] = useState(true);
@@ -76,6 +96,49 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
   const [parkingSpacesError, setParkingSpacesError] = useState("");
   const activeContent = adminPageContent[activePage];
   const isDashboardPage = activePage === "dashboard";
+
+  const handleReturnToDashboard = () => {
+    setActivePage("dashboard");
+  };
+
+  const handleOpenUserManagement = () => {
+    setActivePage("users");
+    setShowUserManagementPopup(true);
+  };
+
+  const handleOpenParkingManagement = () => {
+    setActivePage("lots");
+    setShowParkingManagementPopup(true);
+  };
+
+  const handleOpenSystemActivity = () => {
+    setActivePage("system");
+    setShowSystemActivityPopup(true);
+  };
+
+  const handleOpenUserSettings = () => {
+    setActivePage("settings");
+    setShowUserSettingsPopup(true);
+  };
+
+  const handleModuleClick = (action: (typeof adminModules)[number]["action"]) => {
+    if (action === "users") {
+      handleOpenUserManagement();
+      return;
+    }
+
+    if (action === "lots") {
+      handleOpenParkingManagement();
+      return;
+    }
+
+    if (action === "system") {
+      handleOpenSystemActivity();
+      return;
+    }
+
+    handleOpenUserSettings();
+  };
 
   useEffect(() => {
     setActivityUsersLoading(true);
@@ -160,14 +223,15 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
       <AdminSideBar
         activePage={activePage}
         onPageChange={(pageId) => {
-          if (pageId !== "logout") {
+          if (pageId === "dashboard") {
             setActivePage(pageId);
           }
         }}
         onLogout={() => setShowLogoutConfirm(true)}
-        onUsersClick={() => setShowUserManagementPopup(true)}
-        onLotsClick={() => setShowParkingManagementPopup(true)}
-        onSystemClick={() => setShowSystemActivityPopup(true)}
+        onUsersClick={handleOpenUserManagement}
+        onLotsClick={handleOpenParkingManagement}
+        onSystemClick={handleOpenSystemActivity}
+        onSettingsClick={handleOpenUserSettings}
         userName={userName}
       />
 
@@ -203,16 +267,24 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
         <section className="admin-main-screen__modules">
           <div className="admin-main-screen__section-header">
             <h2>מודולים לניהול</h2>
-            <p>כאן נפתח את כלי האדמין של המערכת באופן נפרד ומדורג.</p>
+            <p>מכאן האדמין מקבל גישה מהירה לכל פעולות הליבה של המערכת, עם מבט ברור על מה אפשר לבצע בכל אזור.</p>
           </div>
 
           <div className="admin-main-screen__module-grid">
-            {adminModules.map((module) => (
-              <article key={module.title} className="admin-main-screen__module-card">
-                <span className="admin-main-screen__module-status">{module.status}</span>
+            {adminModules.map((module, index) => (
+              <button
+                key={module.title}
+                type="button"
+                className={`admin-main-screen__module-card admin-main-screen__module-card--${module.accent}`}
+                style={{ animationDelay: `${index * 90}ms` }}
+                onClick={() => handleModuleClick(module.action)}
+              >
+                <div className="admin-main-screen__module-icon" aria-hidden="true">
+                  {module.icon}
+                </div>
                 <h3>{module.title}</h3>
                 <p>{module.description}</p>
-              </article>
+              </button>
             ))}
           </div>
         </section>
@@ -226,7 +298,10 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
 
       <AdminSystemActivityPopup
         isOpen={showSystemActivityPopup}
-        onClose={() => setShowSystemActivityPopup(false)}
+        onClose={() => {
+          setShowSystemActivityPopup(false);
+          handleReturnToDashboard();
+        }}
         activityUsers={activityUsers}
         loading={activityUsersLoading}
         error={activityUsersError}
@@ -234,7 +309,10 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
 
       <AdminUserManagementPopup
         isOpen={showUserManagementPopup}
-        onClose={() => setShowUserManagementPopup(false)}
+        onClose={() => {
+          setShowUserManagementPopup(false);
+          handleReturnToDashboard();
+        }}
         users={activityUsers}
         usersLoading={activityUsersLoading}
         usersError={activityUsersError}
@@ -245,10 +323,13 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
 
       <AdminParkingManagementPopup
         isOpen={showParkingManagementPopup}
-        onClose={() => setShowParkingManagementPopup(false)}
+        onClose={() => {
+          setShowParkingManagementPopup(false);
+          handleReturnToDashboard();
+        }}
         onOpenUserManagement={() => {
           setShowParkingManagementPopup(false);
-          setShowUserManagementPopup(true);
+          handleOpenUserManagement();
         }}
         parkingLots={parkingLots}
         parkingLotsLoading={parkingLotsLoading}
@@ -257,6 +338,14 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
         parkingSpacesLoading={parkingSpacesLoading}
         parkingSpacesError={parkingSpacesError}
         users={activityUsers}
+      />
+
+      <UserSettings
+        isOpen={showUserSettingsPopup}
+        onClose={() => {
+          setShowUserSettingsPopup(false);
+          handleReturnToDashboard();
+        }}
       />
     </div>
   );

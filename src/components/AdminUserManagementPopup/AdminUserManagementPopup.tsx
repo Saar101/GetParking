@@ -66,6 +66,8 @@ const INITIAL_CREATE_LOT_FORM: CreateLotFormState = {
   ownerDocId: "",
 };
 
+const POPUP_ANIMATION_MS = 280;
+
 function normalizeLotIds(existingLotIds: Array<string | null | undefined>, nextLotId: string) {
   return Array.from(new Set([...existingLotIds.filter(Boolean), nextLotId])) as string[];
 }
@@ -97,6 +99,8 @@ export default function AdminUserManagementPopup({
   const [isAddressSuggestionSelected, setIsAddressSuggestionSelected] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isRendered, setIsRendered] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
 
   const customerUsers = useMemo(
     () => users.filter((user) => user.role === "customer" && !user.isDisabled),
@@ -175,7 +179,28 @@ export default function AdminUserManagementPopup({
     return () => window.clearTimeout(timeoutId);
   }, [createLotForm.address, isAddressSuggestionSelected, isOpen]);
 
-  if (!isOpen) {
+  useEffect(() => {
+    let closeTimer: ReturnType<typeof setTimeout> | undefined;
+
+    if (isOpen) {
+      setIsRendered(true);
+      setIsClosing(false);
+    } else if (isRendered) {
+      setIsClosing(true);
+      closeTimer = setTimeout(() => {
+        setIsRendered(false);
+        setIsClosing(false);
+      }, POPUP_ANIMATION_MS);
+    }
+
+    return () => {
+      if (closeTimer) {
+        clearTimeout(closeTimer);
+      }
+    };
+  }, [isOpen, isRendered]);
+
+  if (!isRendered) {
     return null;
   }
 
@@ -545,9 +570,13 @@ export default function AdminUserManagementPopup({
   };
 
   return (
-    <div className="admin-user-popup__backdrop" role="presentation" onClick={onClose}>
+    <div
+      className={`admin-user-popup__backdrop ${isClosing ? "admin-user-popup__backdrop--closing" : ""}`}
+      role="presentation"
+      onClick={onClose}
+    >
       <section
-        className="admin-user-popup"
+        className={`admin-user-popup ${isClosing ? "admin-user-popup--closing" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-user-popup-title"
@@ -567,11 +596,6 @@ export default function AdminUserManagementPopup({
             ×
           </button>
         </header>
-
-        <p className="admin-user-popup__note">
-          הפעולות כאן מנהלות את מסמכי המערכת ב־Firestore. הן לא יוצרות או מוחקות חשבונות Firebase Auth.
-        </p>
-
         {usersLoading || parkingLotsLoading ? <p className="admin-user-popup__state">טוען נתוני ניהול...</p> : null}
         {usersError ? <p className="admin-user-popup__state admin-user-popup__state--error">{usersError}</p> : null}
         {parkingLotsError ? <p className="admin-user-popup__state admin-user-popup__state--error">{parkingLotsError}</p> : null}

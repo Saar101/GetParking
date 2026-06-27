@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import '../SidBar/SidBar.css';
 
-export type AdminSidebarPageId = 'dashboard' | 'users' | 'lots' | 'system' | 'logout';
+export type AdminSidebarPageId = 'dashboard' | 'users' | 'lots' | 'system' | 'settings' | 'logout';
 
 type AdminSideBarProps = {
   onLogout?: () => void;
@@ -9,6 +9,7 @@ type AdminSideBarProps = {
   onUsersClick?: () => void;
   onLotsClick?: () => void;
   onSystemClick?: () => void;
+  onSettingsClick?: () => void;
   activePage?: AdminSidebarPageId;
   onPageChange?: (pageId: AdminSidebarPageId) => void;
   userName?: string;
@@ -20,6 +21,7 @@ export default function AdminSideBar({
   onUsersClick,
   onLotsClick,
   onSystemClick,
+  onSettingsClick,
   activePage = 'dashboard',
   onPageChange,
   userName,
@@ -65,6 +67,7 @@ export default function AdminSideBar({
     { id: 'users', icon: '👥', label: 'ניהול משתמשים' },
     { id: 'lots', icon: '🏢', label: 'ניהול חניונים' },
     { id: 'system', icon: '🛡️', label: 'בקרת מערכת' },
+    { id: 'settings', icon: '⚙️', label: 'הגדרות משתמש' },
     { id: 'logout', icon: '🚪', label: 'התנתק' },
   ];
 
@@ -76,6 +79,8 @@ export default function AdminSideBar({
       return;
     }
 
+    onPageChange?.(pageId);
+
     if (pageId === 'users') {
       onUsersClick?.();
       return;
@@ -86,7 +91,10 @@ export default function AdminSideBar({
       return;
     }
 
-    onPageChange?.(pageId);
+    if (pageId === 'settings') {
+      onSettingsClick?.();
+      return;
+    }
 
     if (pageId === 'dashboard') {
       onDashboardClick?.();
