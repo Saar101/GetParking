@@ -298,13 +298,6 @@ export default function ParkingInfo({
         </div>
 
         <div className="parking-info-actions">
-          <button
-            className={`action-button navigation-button ${showNavigationOptions ? 'navigation-button--active' : ''}`}
-            onClick={() => setShowNavigationOptions((current) => !current)}
-            disabled={!hasNavigationCoordinates && !navigationAddress}
-          >
-            🧭 נווט
-          </button>
           <button 
             className="action-button book-button"
             onClick={() => {
@@ -313,6 +306,13 @@ export default function ParkingInfo({
             disabled={!parkingSpace.available || isBookingLocked}
           >
             {isBookingLocked ? '🔒 הזמנת חנייה' : '🔖 הזמנת חנייה'}
+          </button>
+          <button
+            className={`action-button navigation-button ${showNavigationOptions ? 'navigation-button--active' : ''}`}
+            onClick={() => setShowNavigationOptions((current) => !current)}
+            disabled={!hasNavigationCoordinates && !navigationAddress}
+          >
+            🧭 נווט
           </button>
           <button 
             className={`action-button recommend-button ${isCelebrating ? 'recommend-button--celebrating' : ''} ${isRecommendationLocked ? 'recommend-button--locked' : ''}`}
