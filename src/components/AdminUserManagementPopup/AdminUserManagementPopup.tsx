@@ -72,6 +72,11 @@ function normalizeLotIds(existingLotIds: Array<string | null | undefined>, nextL
   return Array.from(new Set([...existingLotIds.filter(Boolean), nextLotId])) as string[];
 }
 
+function formatDeleteLotOption(lot: Pick<ParkingLotDoc, "id" | "name" | "address">) {
+  const address = lot.address.trim();
+  return address ? `${lot.name} • ${address}` : `${lot.name} • ${lot.id}`;
+}
+
 export default function AdminUserManagementPopup({
   isOpen,
   onClose,
@@ -89,6 +94,7 @@ export default function AdminUserManagementPopup({
   const [promoteUserDocId, setPromoteUserDocId] = useState("");
   const [createLotForm, setCreateLotForm] = useState<CreateLotFormState>(INITIAL_CREATE_LOT_FORM);
   const [deleteLotId, setDeleteLotId] = useState("");
+  const [deleteLotSearchTerm, setDeleteLotSearchTerm] = useState("");
   const [showDeleteLotConfirm, setShowDeleteLotConfirm] = useState(false);
   const [assignOwnerDocId, setAssignOwnerDocId] = useState("");
   const [assignLotId, setAssignLotId] = useState("");
@@ -131,6 +137,35 @@ export default function AdminUserManagementPopup({
     () => parkingLots.find((lot) => lot.id === deleteLotId) ?? null,
     [deleteLotId, parkingLots]
   );
+
+  const filteredLotsForDeletion = useMemo(() => {
+    const normalizedSearchTerm = deleteLotSearchTerm.trim().toLowerCase();
+
+    if (!normalizedSearchTerm) {
+      return parkingLots;
+    }
+
+    return parkingLots.filter((lot) => {
+      const searchableText = `${lot.name} ${lot.address} ${lot.id}`.toLowerCase();
+      return searchableText.includes(normalizedSearchTerm);
+    });
+  }, [deleteLotSearchTerm, parkingLots]);
+
+  const deleteLotSuggestions = useMemo(() => filteredLotsForDeletion.slice(0, 8), [filteredLotsForDeletion]);
+
+  const shouldShowDeleteLotSuggestions = useMemo(() => {
+    const normalizedSearchTerm = deleteLotSearchTerm.trim().toLowerCase();
+
+    if (!normalizedSearchTerm) {
+      return false;
+    }
+
+    if (!selectedDeleteLot) {
+      return true;
+    }
+
+    return formatDeleteLotOption(selectedDeleteLot).toLowerCase() !== normalizedSearchTerm;
+  }, [deleteLotSearchTerm, selectedDeleteLot]);
 
   useEffect(() => {
     if (!isOpen || isAddressSuggestionSelected) {
@@ -560,6 +595,7 @@ export default function AdminUserManagementPopup({
       await deleteParkingLot(lot.id);
 
       setDeleteLotId("");
+      setDeleteLotSearchTerm("");
       setShowDeleteLotConfirm(false);
       setStatusMessage("החניון נמחק בהצלחה יחד עם מקומות החניה והשייכים שלו.");
     } catch (error) {
@@ -863,15 +899,59 @@ export default function AdminUserManagementPopup({
             </div>
 
             <div className="admin-user-popup__form-grid">
+              <div className="admin-user-popup__lot-search-field">
+                <input
+                  className="admin-user-popup__input"
+                  placeholder="חפש חניון לפי שם, כתובת או מזהה"
+                  value={deleteLotSearchTerm}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    const matchingLot = parkingLots.find(
+                      (lot) => formatDeleteLotOption(lot) === nextValue || lot.id === nextValue
+                    );
+
+                    setDeleteLotSearchTerm(nextValue);
+                    setDeleteLotId(matchingLot?.id ?? "");
+                  }}
+                />
+                {shouldShowDeleteLotSuggestions ? (
+                  deleteLotSuggestions.length > 0 ? (
+                    <div className="admin-user-popup__lot-suggestions">
+                      {deleteLotSuggestions.map((lot) => (
+                        <button
+                          key={lot.id}
+                          type="button"
+                          className="admin-user-popup__lot-suggestion"
+                          onClick={() => {
+                            setDeleteLotId(lot.id);
+                            setDeleteLotSearchTerm(formatDeleteLotOption(lot));
+                          }}
+                        >
+                          <span>{formatDeleteLotOption(lot)}</span>
+                          <span className="admin-user-popup__lot-suggestion-id">{lot.id}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="admin-user-popup__address-hint">לא נמצאו חניונים שמתאימים לחיפוש.</p>
+                  )
+                ) : null}
+              </div>
               <select
                 className="admin-user-popup__input"
                 value={deleteLotId}
-                onChange={(event) => setDeleteLotId(event.target.value)}
+                onChange={(event) => {
+                  const nextLotId = event.target.value;
+                  const nextLot = parkingLots.find((lot) => lot.id === nextLotId);
+
+                  setDeleteLotId(nextLotId);
+                  setDeleteLotSearchTerm(nextLot ? formatDeleteLotOption(nextLot) : "");
+                }}
               >
                 <option value="">בחר חניון למחיקה</option>
-                {parkingLots.map((lot) => (
+                {filteredLotsForDeletion.map((lot) => (
                   <option key={lot.id} value={lot.id}>
-                    {lot.name}
+                    {formatDeleteLotOption(lot)}
                   </option>
                 ))}
               </select>
@@ -950,78 +1030,79 @@ export default function AdminUserManagementPopup({
           </section>
         </div>
 
-        {showDisableConfirm && selectedDisableUser ? (
-          <div className="admin-user-popup__confirm-overlay" role="presentation" onClick={() => setShowDisableConfirm(false)}>
-            <section
-              className="admin-user-popup__confirm-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="admin-user-popup-disable-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <p className="admin-user-popup__confirm-eyebrow">אישור השבתה</p>
-              <h3 id="admin-user-popup-disable-title">להשבית את {selectedDisableUser.name}?</h3>
-              <p className="admin-user-popup__confirm-message">
-                הפעולה תשאיר את מסמך המשתמש ב־Firestore אבל תסמן אותו כמושבת, כך שלא יהיה אפשר להשתמש בו עד להסרת ההשבתה.
-              </p>
-
-              <div className="admin-user-popup__confirm-actions">
-                <button
-                  type="button"
-                  className="admin-user-popup__confirm-button admin-user-popup__confirm-button--ghost"
-                  onClick={() => setShowDisableConfirm(false)}
-                >
-                  ביטול
-                </button>
-                <button
-                  type="button"
-                  className="admin-user-popup__confirm-button admin-user-popup__confirm-button--danger"
-                  onClick={() => void handleDisableUser()}
-                  disabled={submittingAction === "disable-user"}
-                >
-                  {submittingAction === "disable-user" ? "משבית..." : "כן, להשבית"}
-                </button>
-              </div>
-            </section>
-          </div>
-        ) : null}
-
-        {showDeleteLotConfirm && selectedDeleteLot ? (
-          <div className="admin-user-popup__confirm-overlay" role="presentation" onClick={() => setShowDeleteLotConfirm(false)}>
-            <section
-              className="admin-user-popup__confirm-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="admin-user-popup-delete-lot-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <p className="admin-user-popup__confirm-eyebrow">אישור מחיקת חניון</p>
-              <h3 id="admin-user-popup-delete-lot-title">למחוק את {selectedDeleteLot.name}?</h3>
-              <p className="admin-user-popup__confirm-message">
-                הפעולה תמחק את החניון מ־Firestore, תסיר את כל מקומות החניה שלו, ותבטל את השיוך שלו מכל מנהל חניון שמקושר אליו.
-              </p>
-
-              <div className="admin-user-popup__confirm-actions">
-                <button
-                  type="button"
-                  className="admin-user-popup__confirm-button admin-user-popup__confirm-button--ghost"
-                  onClick={() => setShowDeleteLotConfirm(false)}
-                >
-                  ביטול
-                </button>
-                <button
-                  type="button"
-                  className="admin-user-popup__confirm-button admin-user-popup__confirm-button--danger"
-                  onClick={() => void handleDeleteLot()}
-                  disabled={submittingAction === "delete-lot"}
-                >
-                  {submittingAction === "delete-lot" ? "מוחק..." : "כן, למחוק"}
-                </button>
-              </div>
-            </section>
-          </div>
-        ) : null}
       </section>
+
+      {showDisableConfirm && selectedDisableUser ? (
+        <div className="admin-user-popup__confirm-overlay" role="presentation" onClick={() => setShowDisableConfirm(false)}>
+          <section
+            className="admin-user-popup__confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-user-popup-disable-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="admin-user-popup__confirm-eyebrow">אישור השבתה</p>
+            <h3 id="admin-user-popup-disable-title">להשבית את {selectedDisableUser.name}?</h3>
+            <p className="admin-user-popup__confirm-message">
+              הפעולה תשאיר את מסמך המשתמש ב־Firestore אבל תסמן אותו כמושבת, כך שלא יהיה אפשר להשתמש בו עד להסרת ההשבתה.
+            </p>
+
+            <div className="admin-user-popup__confirm-actions">
+              <button
+                type="button"
+                className="admin-user-popup__confirm-button admin-user-popup__confirm-button--ghost"
+                onClick={() => setShowDisableConfirm(false)}
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                className="admin-user-popup__confirm-button admin-user-popup__confirm-button--danger"
+                onClick={() => void handleDisableUser()}
+                disabled={submittingAction === "disable-user"}
+              >
+                {submittingAction === "disable-user" ? "משבית..." : "כן, להשבית"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {showDeleteLotConfirm && selectedDeleteLot ? (
+        <div className="admin-user-popup__confirm-overlay" role="presentation" onClick={() => setShowDeleteLotConfirm(false)}>
+          <section
+            className="admin-user-popup__confirm-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-user-popup-delete-lot-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="admin-user-popup__confirm-eyebrow">אישור מחיקת חניון</p>
+            <h3 id="admin-user-popup-delete-lot-title">למחוק את {selectedDeleteLot.name}?</h3>
+            <p className="admin-user-popup__confirm-message">
+              הפעולה תמחק את החניון מ־Firestore, תסיר את כל מקומות החניה שלו, ותבטל את השיוך שלו מכל מנהל חניון שמקושר אליו.
+            </p>
+
+            <div className="admin-user-popup__confirm-actions">
+              <button
+                type="button"
+                className="admin-user-popup__confirm-button admin-user-popup__confirm-button--ghost"
+                onClick={() => setShowDeleteLotConfirm(false)}
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                className="admin-user-popup__confirm-button admin-user-popup__confirm-button--danger"
+                onClick={() => void handleDeleteLot()}
+                disabled={submittingAction === "delete-lot"}
+              >
+                {submittingAction === "delete-lot" ? "מוחק..." : "כן, למחוק"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

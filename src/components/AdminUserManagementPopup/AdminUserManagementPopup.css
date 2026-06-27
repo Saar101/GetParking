@@ -152,6 +152,11 @@
   gap: 8px;
 }
 
+.admin-user-popup__lot-search-field {
+  display: grid;
+  gap: 8px;
+}
+
 .admin-user-popup__address-hint {
   margin: 0;
   color: #245f84;
@@ -185,6 +190,43 @@
 
 .admin-user-popup__address-suggestion:hover {
   background: rgba(10, 121, 179, 0.14);
+}
+
+.admin-user-popup__lot-suggestions {
+  display: grid;
+  gap: 6px;
+  max-height: 220px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid rgba(8, 80, 120, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 44px rgba(8, 37, 56, 0.16);
+}
+
+.admin-user-popup__lot-suggestion {
+  width: 100%;
+  display: grid;
+  gap: 4px;
+  border: none;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(10, 121, 179, 0.08);
+  color: #09344f;
+  font: inherit;
+  text-align: right;
+  cursor: pointer;
+}
+
+.admin-user-popup__lot-suggestion:hover {
+  background: rgba(10, 121, 179, 0.14);
+}
+
+.admin-user-popup__lot-suggestion-id {
+  color: #4e7893;
+  font-size: 0.82rem;
+  direction: ltr;
+  text-align: left;
 }
 
 .admin-user-popup__action {
