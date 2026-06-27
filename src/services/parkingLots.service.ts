@@ -150,6 +150,18 @@ function getDurationMinutes(unit: PricingDurationUnit, value: number) {
   return value;
 }
 
+function getDurationUnitRank(unit: PricingDurationUnit) {
+  if (unit === "minutes") {
+    return 0;
+  }
+
+  if (unit === "hours") {
+    return 1;
+  }
+
+  return 2;
+}
+
 function normalizePricingTier(tier: ParkingPriceTier): ParkingPriceTier {
   const durationUnit = normalizeDurationUnit(tier.durationUnit);
 
@@ -164,7 +176,15 @@ function normalizePricingTiers(tiers: ParkingPriceTier[] | null | undefined, fal
   const normalizedTiers = (tiers ?? [])
     .filter((tier) => tier && Number.isFinite(tier.price) && tier.price > 0)
     .map(normalizePricingTier)
-    .sort((left, right) => getDurationMinutes(left.durationUnit, left.durationValue) - getDurationMinutes(right.durationUnit, right.durationValue));
+    .sort((left, right) => {
+      const unitRankDifference = getDurationUnitRank(left.durationUnit) - getDurationUnitRank(right.durationUnit);
+
+      if (unitRankDifference !== 0) {
+        return unitRankDifference;
+      }
+
+      return getDurationMinutes(left.durationUnit, left.durationValue) - getDurationMinutes(right.durationUnit, right.durationValue);
+    });
 
   if (normalizedTiers.length > 0) {
     return normalizedTiers;

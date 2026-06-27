@@ -34,7 +34,13 @@ type ParkingInfoCard = {
   hidePricing?: boolean;
   bookingLocked?: boolean;
   pricingLabel: string;
-  pricingRanges: Array<{ text: string; isSale?: boolean; originalText?: string }>;
+  pricingRanges: Array<{
+    text: string;
+    isSale?: boolean;
+    originalText?: string;
+    animateSale?: boolean;
+    coveredBySale?: boolean;
+  }>;
   pricingRangesTitle: string;
   originalPriceText?: string;
   salePriceText?: string;
@@ -87,57 +93,95 @@ function getTierDurationMinutes(tier: Pick<ParkingPriceTier, "durationUnit" | "d
   return tier.durationValue;
 }
 
+function getTierUnitRank(tier: Pick<ParkingPriceTier, "durationUnit">) {
+  if (tier.durationUnit === "minutes") {
+    return 0;
+  }
+
+  if (tier.durationUnit === "hours") {
+    return 1;
+  }
+
+  return 2;
+}
+
 function getTierKey(tier: Pick<ParkingPriceTier, "durationUnit" | "durationValue">) {
   return `${tier.durationUnit}:${tier.durationValue}`;
 }
 
 function buildDisplayedPricingRanges(basePricingTiers: ParkingPriceTier[], activeSalePricingTiers: ParkingPriceTier[]) {
   const saleTierByKey = new globalThis.Map(activeSalePricingTiers.map((tier) => [getTierKey(tier), tier]));
-  const highlightedSaleTierKey = activeSalePricingTiers[0] ? getTierKey(activeSalePricingTiers[0]) : null;
+  const sortedSaleTiers = [...activeSalePricingTiers].sort(
+    (left, right) => getTierDurationMinutes(left) - getTierDurationMinutes(right)
+  );
+  const coveredSaleTierKeys = new Set<string>();
   const mergedTiers = basePricingTiers.map((tier) => {
-    const matchingSaleTier = saleTierByKey.get(getTierKey(tier));
+    const exactSaleTier = saleTierByKey.get(getTierKey(tier));
+    const coveringSaleTier = exactSaleTier ?? sortedSaleTiers.find(
+      (saleTier) => getTierDurationMinutes(saleTier) >= getTierDurationMinutes(tier)
+    );
 
-    if (matchingSaleTier) {
-      saleTierByKey.delete(getTierKey(tier));
+    if (coveringSaleTier) {
+      const isDirectSaleTier = getTierKey(coveringSaleTier) === getTierKey(tier);
+      coveredSaleTierKeys.add(getTierKey(coveringSaleTier));
       return {
-        text: `₪${matchingSaleTier.price} ${getPricingTierLabel(matchingSaleTier)}`,
+        text: isDirectSaleTier ? `₪${coveringSaleTier.price} ${getPricingTierLabel(coveringSaleTier)}` : "",
         originalText: `₪${tier.price} ${getPricingTierLabel(tier)}`,
-        isSale: true,
-        durationMinutes: getTierDurationMinutes(matchingSaleTier),
+        isSale: isDirectSaleTier,
+        animateSale: isDirectSaleTier,
+        coveredBySale: !isDirectSaleTier,
+        durationUnit: tier.durationUnit,
+        durationValue: tier.durationValue,
+        durationMinutes: getTierDurationMinutes(tier),
       };
     }
 
     return {
       text: `₪${tier.price} ${getPricingTierLabel(tier)}`,
       isSale: false,
+      animateSale: false,
+      coveredBySale: false,
+      durationUnit: tier.durationUnit,
+      durationValue: tier.durationValue,
       durationMinutes: getTierDurationMinutes(tier),
     };
   });
 
   for (const saleTier of saleTierByKey.values()) {
+    if (coveredSaleTierKeys.has(getTierKey(saleTier))) {
+      continue;
+    }
+
     mergedTiers.push({
       text: `₪${saleTier.price} ${getPricingTierLabel(saleTier)}`,
       originalText: undefined,
       isSale: true,
+      animateSale: true,
+      coveredBySale: false,
+      durationUnit: saleTier.durationUnit,
+      durationValue: saleTier.durationValue,
       durationMinutes: getTierDurationMinutes(saleTier),
     });
   }
 
   return mergedTiers
-    .sort((left, right) => left.durationMinutes - right.durationMinutes)
-    .filter(({ isSale, text }) => {
-      if (!highlightedSaleTierKey || !isSale) {
-        return true;
+    .sort((left, right) => {
+      const leftUnitRank = getTierUnitRank({ durationUnit: left.durationUnit });
+      const rightUnitRank = getTierUnitRank({ durationUnit: right.durationUnit });
+
+      if (leftUnitRank !== rightUnitRank) {
+        return leftUnitRank - rightUnitRank;
       }
 
-      const highlightedTier = activeSalePricingTiers[0];
-      if (!highlightedTier) {
-        return true;
-      }
-
-      return text !== `₪${highlightedTier.price} ${getPricingTierLabel(highlightedTier)}`;
+      return left.durationMinutes - right.durationMinutes;
     })
-    .map(({ text, isSale, originalText }) => ({ text, isSale, originalText }));
+    .map(({ text, isSale, originalText, animateSale, coveredBySale }) => ({
+      text,
+      isSale,
+      originalText,
+      animateSale,
+      coveredBySale,
+    }));
 }
 
 function toParkingInfoCard(
@@ -159,9 +203,17 @@ function toParkingInfoCard(
   const effectivePricing = getEffectiveLotPricing(lot);
   const basePricingTiers = getBasePricingTiers(lot);
   const activeSalePricingTiers = getActiveSalePricingTiers(lot);
-  const displayedPricingRanges = buildDisplayedPricingRanges(basePricingTiers, activeSalePricingTiers);
-  const primaryBaseTier = basePricingTiers[0];
   const primarySaleTier = activeSalePricingTiers[0];
+  const matchingBaseTierForSale = primarySaleTier
+    ? basePricingTiers.find((tier) => getTierKey(tier) === getTierKey(primarySaleTier)) ?? null
+    : null;
+  const primaryBasePriceText = matchingBaseTierForSale
+    ? `₪${matchingBaseTierForSale.price} ${getPricingTierLabel(matchingBaseTierForSale)}`
+    : undefined;
+  const primarySalePriceText = primarySaleTier
+    ? `₪${primarySaleTier.price} ${getPricingTierLabel(primarySaleTier)}`
+    : undefined;
+  const displayedPricingRanges = buildDisplayedPricingRanges(basePricingTiers, activeSalePricingTiers);
 
   return {
     id: lot.id,
@@ -174,14 +226,10 @@ function toParkingInfoCard(
     pricingRanges: isGovernmentImportedLot ? [] : displayedPricingRanges,
     originalPriceText: isGovernmentImportedLot
       ? undefined
-      : primaryBaseTier
-        ? `₪${primaryBaseTier.price} ${getPricingTierLabel(primaryBaseTier)}`
-        : undefined,
+      : primaryBasePriceText,
     salePriceText: isGovernmentImportedLot
       ? undefined
-      : primarySaleTier
-        ? `₪${primarySaleTier.price} ${getPricingTierLabel(primarySaleTier)}`
-        : undefined,
+      : primarySalePriceText,
     hasActiveSale: isGovernmentImportedLot ? false : activeSalePricingTiers.length > 0,
     distance: `${Math.round(distance)} מ' מהמיקום שנבחר`,
     rating: Math.min(5, Math.max(1, rating)),

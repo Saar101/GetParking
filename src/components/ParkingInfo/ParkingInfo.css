@@ -128,7 +128,8 @@
 }
 
 .parking-sale-highlight__original,
-.parking-price-ranges__original {
+.parking-price-ranges__original,
+.parking-price-ranges__covered-original {
   color: #6b7280;
   font-size: 12px;
   font-weight: 600;
@@ -146,6 +147,11 @@
   line-height: 1.45;
   text-shadow: 0 0 10px rgba(251, 146, 60, 0.28), 0 0 18px rgba(249, 115, 22, 0.16);
   animation: parking-sale-float 3.6s cubic-bezier(0.37, 0, 0.2, 1) infinite;
+}
+
+.parking-price-ranges__sale--covered {
+  text-shadow: none;
+  animation: none;
 }
 
 .parking-price-ranges {

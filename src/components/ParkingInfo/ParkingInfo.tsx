@@ -16,7 +16,13 @@ interface ParkingSpace {
   hidePricing?: boolean;
   bookingLocked?: boolean;
   pricingLabel?: string;
-  pricingRanges?: Array<{ text: string; isSale?: boolean; originalText?: string }>;
+  pricingRanges?: Array<{
+    text: string;
+    isSale?: boolean;
+    originalText?: string;
+    animateSale?: boolean;
+    coveredBySale?: boolean;
+  }>;
   pricingRangesTitle?: string;
   originalPriceText?: string;
   salePriceText?: string;
@@ -112,6 +118,20 @@ export default function ParkingInfo({
 
   const isRecommendationLocked = recommendationDisabled || hasRecommendedLocal;
   const isBookingLocked = Boolean(parkingSpace.bookingLocked);
+  const fallbackSaleRange =
+    parkingSpace.hasActiveSale && parkingSpace.salePriceText
+      ? {
+          text: parkingSpace.salePriceText,
+          isSale: true,
+          originalText: parkingSpace.originalPriceText,
+          animateSale: true,
+        }
+      : null;
+  const displayPricingRanges = (parkingSpace.pricingRanges ?? []).length > 0
+    ? parkingSpace.pricingRanges ?? []
+    : fallbackSaleRange
+      ? [fallbackSaleRange]
+      : [];
 
   const handleRecommend = () => {
     if (isRecommendationLocked) {
@@ -197,21 +217,17 @@ export default function ParkingInfo({
             <div className="detail-row">
               <span className="detail-label">💰 מחיר:</span>
               <div className="parking-price-block">
-                {parkingSpace.hasActiveSale && parkingSpace.originalPriceText && parkingSpace.salePriceText ? (
-                <div className="parking-sale-highlight" role="status" aria-live="polite">
-                  <span className="parking-sale-highlight__original">{parkingSpace.originalPriceText}</span>
-                  <span className="parking-sale-highlight__sale">{parkingSpace.salePriceText}</span>
-                </div>
-                ) : null}
-                {parkingSpace.pricingRanges && parkingSpace.pricingRanges.length > 0 ? (
+                {displayPricingRanges.length > 0 ? (
                 <div className={`parking-price-ranges ${parkingSpace.hasActiveSale ? 'parking-price-ranges--sale' : ''}`}>
                   <ul className="parking-price-ranges__list">
-                    {parkingSpace.pricingRanges.map((range) => (
+                    {displayPricingRanges.map((range) => (
                       <li key={`${range.originalText ?? ''}-${range.text}`} className={`parking-price-ranges__item ${range.isSale ? 'parking-price-ranges__item--sale' : ''}`}>
-                        {range.isSale && range.originalText ? (
+                        {range.coveredBySale && range.originalText ? (
+                          <span className="parking-price-ranges__covered-original">{range.originalText}</span>
+                        ) : range.isSale && range.originalText ? (
                           <span className="parking-price-ranges__sale-pair">
                             <span className="parking-price-ranges__original">{range.originalText}</span>
-                            <span className="parking-price-ranges__sale">{range.text}</span>
+                            <span className={`parking-price-ranges__sale ${range.animateSale ? '' : 'parking-price-ranges__sale--covered'}`.trim()}>{range.text}</span>
                           </span>
                         ) : (
                           range.text
@@ -220,9 +236,9 @@ export default function ParkingInfo({
                     ))}
                   </ul>
                 </div>
-                ) : (
+                ) : !parkingSpace.hasActiveSale ? (
                   <span className="detail-value">₪{parkingSpace.price} {parkingSpace.pricingLabel ?? "לשעה"}</span>
-                )}
+                ) : null}
               </div>
             </div>
           ) : null}
