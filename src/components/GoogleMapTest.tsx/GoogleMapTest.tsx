@@ -31,6 +31,7 @@ type ParkingInfoCard = {
   id: string;
   address: string;
   price: number;
+  hidePricing?: boolean;
   pricingLabel: string;
   pricingRanges: Array<{ text: string; isSale?: boolean; originalText?: string }>;
   pricingRangesTitle: string;
@@ -143,6 +144,7 @@ function toParkingInfoCard(
   center: LatLng | null,
   lotsInRadius: ParkingLotMarker[]
 ): ParkingInfoCard {
+  const isGovernmentImportedLot = lot.id.startsWith("gov-il-");
   const distance = center ? distanceMeters(center, lot.location) : 0;
   const recommendationCount = Math.max(0, lot.recommendationCount ?? 0);
   const maxRecommendations = Math.max(
@@ -164,12 +166,21 @@ function toParkingInfoCard(
     id: lot.id,
     address: `${lot.name} • ${lot.address}`,
     price: effectivePricing.price,
+    hidePricing: isGovernmentImportedLot,
     pricingLabel: effectivePricing.label,
     pricingRangesTitle: activeSalePricingTiers.length > 0 ? "מחירי מבצע לפי זמן" : "מחירים לפי זמן",
-    pricingRanges: displayedPricingRanges,
-    originalPriceText: primaryBaseTier ? `₪${primaryBaseTier.price} ${getPricingTierLabel(primaryBaseTier)}` : undefined,
-    salePriceText: primarySaleTier ? `₪${primarySaleTier.price} ${getPricingTierLabel(primarySaleTier)}` : undefined,
-    hasActiveSale: activeSalePricingTiers.length > 0,
+    pricingRanges: isGovernmentImportedLot ? [] : displayedPricingRanges,
+    originalPriceText: isGovernmentImportedLot
+      ? undefined
+      : primaryBaseTier
+        ? `₪${primaryBaseTier.price} ${getPricingTierLabel(primaryBaseTier)}`
+        : undefined,
+    salePriceText: isGovernmentImportedLot
+      ? undefined
+      : primarySaleTier
+        ? `₪${primarySaleTier.price} ${getPricingTierLabel(primarySaleTier)}`
+        : undefined,
+    hasActiveSale: isGovernmentImportedLot ? false : activeSalePricingTiers.length > 0,
     distance: `${Math.round(distance)} מ' מהמיקום שנבחר`,
     rating: Math.min(5, Math.max(1, rating)),
     recommendationCount,
@@ -389,7 +400,9 @@ function MapContent({
             <div className="gmt-parking-lot-tooltip">
               <strong>{lot.name}</strong>
               <span>{lot.address}</span>
-              <span>₪{getEffectiveLotPricing(lot).price} {getEffectiveLotPricing(lot).label}</span>
+              {!lot.id.startsWith("gov-il-") ? (
+                <span>₪{getEffectiveLotPricing(lot).price} {getEffectiveLotPricing(lot).label}</span>
+              ) : null}
             </div>
           </div>
         </AdvancedMarker>

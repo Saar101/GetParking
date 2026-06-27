@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { resetAllParkingSpacesToAvailable } from "../../services/parkingSpaces.service";
-import { seedGetParkingData } from "../../services/seed";
+import { importIsraelGovernmentParkingLots, seedGetParkingData } from "../../services/seed";
 import BookingsTable from "../BookingsTable/BookingsTable";
 import BookingBubbles from "../BookingBubbles/BookingBubbles";
 import FavoritesTable from "../FavoritesTable/FavoritesTable";
@@ -61,6 +61,17 @@ export default function CustomerMainScreen({ userName, onLogout, showIntro }: Cu
     }
   };
 
+  const importGovernmentLots = async () => {
+    try {
+      setStatus("Importing Israel parking lots...");
+      const result = await importIsraelGovernmentParkingLots();
+      setStatus(`✅ Imported ${result.imported}/${result.fetched} government parking lots (${result.skipped} skipped)`);
+    } catch (error: any) {
+      console.error(error);
+      setStatus(`❌ Import failed: ${error?.message ?? "unknown error"}`);
+    }
+  };
+
   const handleCloseBookings = () => {
     setShowBookings(false);
     setActiveSidebarPage('find');
@@ -112,6 +123,13 @@ export default function CustomerMainScreen({ userName, onLogout, showIntro }: Cu
             title="Seed Firestore with test data"
           >
             Run seed
+          </button>
+          <button
+            onClick={importGovernmentLots}
+            style={{ padding: '8px 12px', borderRadius: 8, background: '#117a65', color: 'white', border: 'none', cursor: 'pointer' }}
+            title="Import official Israel parking lots into Firestore"
+          >
+            Import Israel lots
           </button>
           <button
             onClick={resetParkingSpaces}

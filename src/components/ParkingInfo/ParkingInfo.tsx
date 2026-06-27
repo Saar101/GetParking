@@ -13,6 +13,7 @@ interface ParkingSpace {
   id: string;
   address: string;
   price: number;
+  hidePricing?: boolean;
   pricingLabel?: string;
   pricingRanges?: Array<{ text: string; isSale?: boolean; originalText?: string }>;
   pricingRangesTitle?: string;
@@ -190,16 +191,17 @@ export default function ParkingInfo({
         </div>
 
         <div className="parking-info-details">
-          <div className="detail-row">
-            <span className="detail-label">💰 מחיר:</span>
-            <div className="parking-price-block">
-              {parkingSpace.hasActiveSale && parkingSpace.originalPriceText && parkingSpace.salePriceText ? (
+          {!parkingSpace.hidePricing ? (
+            <div className="detail-row">
+              <span className="detail-label">💰 מחיר:</span>
+              <div className="parking-price-block">
+                {parkingSpace.hasActiveSale && parkingSpace.originalPriceText && parkingSpace.salePriceText ? (
                 <div className="parking-sale-highlight" role="status" aria-live="polite">
                   <span className="parking-sale-highlight__original">{parkingSpace.originalPriceText}</span>
                   <span className="parking-sale-highlight__sale">{parkingSpace.salePriceText}</span>
                 </div>
-              ) : null}
-              {parkingSpace.pricingRanges && parkingSpace.pricingRanges.length > 0 ? (
+                ) : null}
+                {parkingSpace.pricingRanges && parkingSpace.pricingRanges.length > 0 ? (
                 <div className={`parking-price-ranges ${parkingSpace.hasActiveSale ? 'parking-price-ranges--sale' : ''}`}>
                   <ul className="parking-price-ranges__list">
                     {parkingSpace.pricingRanges.map((range) => (
@@ -216,11 +218,12 @@ export default function ParkingInfo({
                     ))}
                   </ul>
                 </div>
-              ) : (
-                <span className="detail-value">₪{parkingSpace.price} {parkingSpace.pricingLabel ?? "לשעה"}</span>
-              )}
+                ) : (
+                  <span className="detail-value">₪{parkingSpace.price} {parkingSpace.pricingLabel ?? "לשעה"}</span>
+                )}
+              </div>
             </div>
-          </div>
+          ) : null}
           
           <div className="detail-row">
             <span className="detail-label">📍 מרחק:</span>
