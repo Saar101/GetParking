@@ -14,6 +14,7 @@ interface ParkingSpace {
   address: string;
   price: number;
   hidePricing?: boolean;
+  bookingLocked?: boolean;
   pricingLabel?: string;
   pricingRanges?: Array<{ text: string; isSale?: boolean; originalText?: string }>;
   pricingRangesTitle?: string;
@@ -110,6 +111,7 @@ export default function ParkingInfo({
   if (!isOpen || !parkingSpace) return null;
 
   const isRecommendationLocked = recommendationDisabled || hasRecommendedLocal;
+  const isBookingLocked = Boolean(parkingSpace.bookingLocked);
 
   const handleRecommend = () => {
     if (isRecommendationLocked) {
@@ -257,9 +259,9 @@ export default function ParkingInfo({
             onClick={() => {
               setShowReservation(true);
             }}
-            disabled={!parkingSpace.available}
+            disabled={!parkingSpace.available || isBookingLocked}
           >
-            🔖 הזמנת חנייה
+            {isBookingLocked ? '🔒 הזמנת חנייה' : '🔖 הזמנת חנייה'}
           </button>
           <button 
             className={`action-button recommend-button ${isCelebrating ? 'recommend-button--celebrating' : ''} ${isRecommendationLocked ? 'recommend-button--locked' : ''}`}

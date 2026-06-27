@@ -32,6 +32,7 @@ type ParkingInfoCard = {
   address: string;
   price: number;
   hidePricing?: boolean;
+  bookingLocked?: boolean;
   pricingLabel: string;
   pricingRanges: Array<{ text: string; isSale?: boolean; originalText?: string }>;
   pricingRangesTitle: string;
@@ -167,6 +168,7 @@ function toParkingInfoCard(
     address: `${lot.name} • ${lot.address}`,
     price: effectivePricing.price,
     hidePricing: isGovernmentImportedLot,
+    bookingLocked: isGovernmentImportedLot,
     pricingLabel: effectivePricing.label,
     pricingRangesTitle: activeSalePricingTiers.length > 0 ? "מחירי מבצע לפי זמן" : "מחירים לפי זמן",
     pricingRanges: isGovernmentImportedLot ? [] : displayedPricingRanges,
