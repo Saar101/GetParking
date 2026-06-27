@@ -16,6 +16,8 @@ type FavoriteParkingCard = {
   id: string;
   address: string;
   price: number;
+  hidePricing?: boolean;
+  bookingLocked?: boolean;
   pricingLabel: string;
   distance: string;
   rating: number;
@@ -31,6 +33,7 @@ function distanceLabel(recommendationCount: number) {
 }
 
 function toFavoriteParkingCard(lot: ParkingLotMarker): FavoriteParkingCard {
+  const isGovernmentImportedLot = lot.id.startsWith("gov-il-");
   const recommendationCount = Math.max(0, lot.recommendationCount ?? 0);
   const rating = Math.min(5, Math.max(1, 1 + recommendationCount / 8));
   const effectivePricing = getEffectiveLotPricing(lot);
@@ -39,6 +42,8 @@ function toFavoriteParkingCard(lot: ParkingLotMarker): FavoriteParkingCard {
     id: lot.id,
     address: `${lot.name} • ${lot.address}`,
     price: effectivePricing.price,
+    hidePricing: isGovernmentImportedLot,
+    bookingLocked: isGovernmentImportedLot,
     pricingLabel: effectivePricing.label,
     distance: distanceLabel(recommendationCount),
     rating,
@@ -174,7 +179,9 @@ export default function FavoritesTable({ isOpen, onClose }: FavoritesTableProps)
                       <p className="favorites-card__eyebrow">מועדף</p>
                       <h3>{lot.address}</h3>
                     </div>
-                    <span className="favorites-card__price">₪{lot.price} {lot.pricingLabel}</span>
+                    {!lot.hidePricing ? (
+                      <span className="favorites-card__price">₪{lot.price} {lot.pricingLabel}</span>
+                    ) : null}
                   </div>
 
                   <div className="favorites-card__meta">
