@@ -74,21 +74,26 @@ function normalizeParkingLot(lot) {
   const price = Number(lot?.basePrice ?? lot?.price ?? 0);
   const salePrice = lot?.salePrice == null ? null : Number(lot.salePrice);
   const recommendationCount = Number(lot?.recommendationCount ?? lot?.recommendations ?? lot?.reviews ?? 0);
+  const id = String(lot?.id ?? lot?.parkingLotId ?? '');
   const basePricingTiers = normalizePricingTiers(lot?.basePricingTiers);
   const salePricingTiers = normalizePricingTiers(lot?.salePricingTiers);
   const activeSalePricingTiers = normalizePricingTiers(lot?.activeSalePricingTiers);
+  const hasKnownPricing = typeof lot?.hasKnownPricing === 'boolean'
+    ? lot.hasKnownPricing
+    : !id.startsWith('gov-il-');
 
   return {
-    id: String(lot?.id ?? lot?.parkingLotId ?? ''),
+    id,
     name: String(lot?.name ?? lot?.title ?? ''),
     distanceMeters: Number.isFinite(distanceMeters) ? distanceMeters : 0,
     price: Number.isFinite(price) ? price : 0,
+    hasKnownPricing,
     salePrice: Number.isFinite(salePrice) ? salePrice : null,
     pricingLabel: typeof lot?.pricingLabel === 'string' ? lot.pricingLabel : null,
     salePricingLabel: typeof lot?.salePricingLabel === 'string' ? lot.salePricingLabel : null,
-    basePricingTiers,
-    salePricingTiers,
-    activeSalePricingTiers,
+    basePricingTiers: hasKnownPricing ? basePricingTiers : [],
+    salePricingTiers: hasKnownPricing ? salePricingTiers : [],
+    activeSalePricingTiers: hasKnownPricing ? activeSalePricingTiers : [],
     saleStartsAt: lot?.saleStartsAt ?? null,
     saleEndsAt: lot?.saleEndsAt ?? null,
     recommendationCount: Number.isFinite(recommendationCount) ? recommendationCount : 0,
@@ -108,20 +113,25 @@ function normalizeRecommendationPayload(payload) {
 
 function buildPrompt(normalizedPayload) {
   const examples = normalizedPayload.parkingLots
-    .map((p) => `- id: ${p.id}, name: ${p.name}, distanceMeters: ${p.distanceMeters}, price: ${p.price}, pricingLabel: ${p.pricingLabel ?? 'null'}, salePrice: ${p.salePrice ?? 'null'}, salePricingLabel: ${p.salePricingLabel ?? 'null'}, basePricingTiers: ${formatTierSummary(p.basePricingTiers)}, salePricingTiers: ${formatTierSummary(p.salePricingTiers)}, activeSalePricingTiers: ${formatTierSummary(p.activeSalePricingTiers)}, saleWindow: ${p.saleStartsAt ?? 'null'} -> ${p.saleEndsAt ?? 'null'}, recommendationCount: ${p.recommendationCount}, available: ${p.available}`)
+    .map((p) => `- id: ${p.id}, name: ${p.name}, distanceMeters: ${p.distanceMeters}, hasKnownPricing: ${p.hasKnownPricing ? 'yes' : 'no'}, price: ${p.hasKnownPricing ? p.price : 'unknown'}, pricingLabel: ${p.hasKnownPricing ? (p.pricingLabel ?? 'null') : 'unknown'}, salePrice: ${p.hasKnownPricing ? (p.salePrice ?? 'null') : 'unknown'}, salePricingLabel: ${p.hasKnownPricing ? (p.salePricingLabel ?? 'null') : 'unknown'}, basePricingTiers: ${p.hasKnownPricing ? formatTierSummary(p.basePricingTiers) : 'unknown'}, salePricingTiers: ${p.hasKnownPricing ? formatTierSummary(p.salePricingTiers) : 'unknown'}, activeSalePricingTiers: ${p.hasKnownPricing ? formatTierSummary(p.activeSalePricingTiers) : 'unknown'}, saleWindow: ${p.hasKnownPricing ? `${p.saleStartsAt ?? 'null'} -> ${p.saleEndsAt ?? 'null'}` : 'unknown'}, recommendationCount: ${p.recommendationCount}, available: ${p.available}`)
     .join('\n');
 
-  return `תפקידך: לבחור את החניון הטוב ביותר מתוך רשימת חניונים לפי המרחק, כל מדרגות המחיר, מדרגות המבצע, זמינות ומספר המלצות.
+  return `תפקידך: לבחור את החניון הטוב ביותר מתוך רשימת חניונים לפי המרחק, כל מדרגות המחיר הידועות, זמינות ומספר המלצות.
 
 חניונים:\n${examples}
 
-כללי בדיקה מומלצים: נמוך מרחק, מחיר נמוך, מבצע אמיתי עדיף רק בטווחים שהוא מכסה, מספר המלצות גבוה.
+כללי בדיקה מומלצים: נמוך מרחק, מחיר נמוך כשמחיר ידוע, מבצע אמיתי עדיף רק בטווחים שהוא מכסה, מספר המלצות גבוה.
 
-חשוב: אם יש basePricingTiers / salePricingTiers / activeSalePricingTiers, אלה הנתונים העיקריים לחישוב. אל תסתמך רק על price או salePrice אם יש מדרגות מפורטות.
+חשוב מאוד:
+- יש חניונים עם מחיר ידוע ויש חניונים עם מחיר לא ידוע.
+- כש-hasKnownPricing הוא no, אסור להתייחס ל-price או לנתוני מחיר כאילו הם אמיתיים. אלה חניונים שחסר לנו עליהם מידע מחירים.
+- חניון עם מחיר לא ידוע עדיין יכול להיות מומלץ לפי מרחק, זמינות והמלצות, אבל צריך לציין שהמחיר שלו אינו ידוע.
+- אם יש basePricingTiers / salePricingTiers / activeSalePricingTiers, אלה הנתונים העיקריים לחישוב. אל תסתמך רק על price או salePrice אם יש מדרגות מפורטות.
+- אם שני חניונים דומים מאוד, העדף חניון עם מחיר ידוע על פני חניון שמחירו לא ידוע.
 
 אם יש חניון לא זמין, יש להעדיף חניון זמין אחר.
 
-פלט מבוקש: JSON בלבד בפורמט {"recommendedLotId":"<id>", "explanation":"<Hebrew explanation, short>"}
+פלט מבוקש: JSON בלבד בפורמט {"recommendedLotId":"<id>", "explanation":"<Hebrew explanation, short>"}. אם בחרת חניון שמחירו לא ידוע, ההסבר חייב לציין זאת במפורש.
 `;
 }
 
@@ -146,7 +156,7 @@ function buildFollowupMessages(payload, parsedConversation) {
       : [];
 
   const parkingLotSummary = parkingLots
-    .map((lot) => `- ${lot.id}: ${lot.name}, מרחק ${lot.distanceMeters} מ', מחיר מוביל ₪${lot.price} ${lot.pricingLabel ?? ''}, מבצע מוביל ${lot.salePrice != null ? `₪${lot.salePrice} ${lot.salePricingLabel ?? ''}` : 'אין'}, מדרגות בסיס: ${formatTierSummary(lot.basePricingTiers)}, מדרגות מבצע: ${formatTierSummary(lot.salePricingTiers)}, מדרגות מבצע פעילות: ${formatTierSummary(lot.activeSalePricingTiers)}, חלון מבצע: ${lot.saleStartsAt ?? 'null'} -> ${lot.saleEndsAt ?? 'null'}, המלצות ${lot.recommendationCount}, זמין ${lot.available ? 'כן' : 'לא'}`)
+    .map((lot) => `- ${lot.id}: ${lot.name}, מרחק ${lot.distanceMeters} מ', מצב מחיר ${lot.hasKnownPricing ? 'ידוע' : 'לא ידוע'}, מחיר מוביל ${lot.hasKnownPricing ? `₪${lot.price} ${lot.pricingLabel ?? ''}`.trim() : 'לא ידוע'}, מבצע מוביל ${lot.hasKnownPricing ? (lot.salePrice != null ? `₪${lot.salePrice} ${lot.salePricingLabel ?? ''}`.trim() : 'אין') : 'לא ידוע'}, מדרגות בסיס: ${lot.hasKnownPricing ? formatTierSummary(lot.basePricingTiers) : 'לא ידוע'}, מדרגות מבצע: ${lot.hasKnownPricing ? formatTierSummary(lot.salePricingTiers) : 'לא ידוע'}, מדרגות מבצע פעילות: ${lot.hasKnownPricing ? formatTierSummary(lot.activeSalePricingTiers) : 'לא ידוע'}, חלון מבצע: ${lot.hasKnownPricing ? `${lot.saleStartsAt ?? 'null'} -> ${lot.saleEndsAt ?? 'null'}` : 'לא ידוע'}, המלצות ${lot.recommendationCount}, זמין ${lot.available ? 'כן' : 'לא'}`)
     .join('\n');
 
   return [
@@ -222,12 +232,13 @@ function normalizeAIRecommendation(parsed) {
 
 function scoreParkingLot(lot) {
   const distancePenalty = Math.max(0, Number(lot.distanceMeters) || 0) * 0.03;
-  const pricePenalty = Math.max(0, Number(lot.price) || 0) * 1.2;
-  const saleBonus = Array.isArray(lot.activeSalePricingTiers) && lot.activeSalePricingTiers.length > 0 ? 8 : lot.salePrice != null ? 6 : 0;
+  const pricePenalty = lot.hasKnownPricing ? Math.max(0, Number(lot.price) || 0) * 1.2 : 0;
+  const saleBonus = lot.hasKnownPricing && Array.isArray(lot.activeSalePricingTiers) && lot.activeSalePricingTiers.length > 0 ? 8 : lot.hasKnownPricing && lot.salePrice != null ? 6 : 0;
   const recommendationBonus = Math.max(0, Number(lot.recommendationCount) || 0) * 0.4;
   const availabilityPenalty = lot.available ? 0 : 100;
+  const unknownPricingPenalty = lot.hasKnownPricing ? 0 : 7;
 
-  return 100 - distancePenalty - pricePenalty + saleBonus + recommendationBonus - availabilityPenalty;
+  return 100 - distancePenalty - pricePenalty + saleBonus + recommendationBonus - availabilityPenalty - unknownPricingPenalty;
 }
 
 function rankParkingLots(parkingLots) {
@@ -260,6 +271,7 @@ function localRank(parkingLots, sourceReason = 'local_rank') {
       score: lot.score,
       distanceMeters: lot.distanceMeters,
       price: lot.price,
+      hasKnownPricing: lot.hasKnownPricing,
       salePrice: lot.salePrice,
       pricingLabel: lot.pricingLabel,
       salePricingLabel: lot.salePricingLabel,
@@ -320,6 +332,7 @@ export async function getRecommendation(payload) {
           score: lot.score,
           distanceMeters: lot.distanceMeters,
           price: lot.price,
+          hasKnownPricing: lot.hasKnownPricing,
           salePrice: lot.salePrice,
           pricingLabel: lot.pricingLabel,
           salePricingLabel: lot.salePricingLabel,

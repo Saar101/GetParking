@@ -743,6 +743,7 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
               const basePricingTiers = getBasePricingTiers(lot);
               const salePricingTiers = getSalePricingTiers(lot);
               const activeSalePricingTiers = getActiveSalePricingTiers(lot);
+              const hasKnownPricing = !lot.id.startsWith("gov-il-");
 
               const toRecommendationTier = (tier: ParkingPriceTier) => ({
                 price: tier.price,
@@ -756,12 +757,13 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
                 name: lot.name,
                 distanceMeters: distance,
                 price: effectivePricing.price,
+                hasKnownPricing,
                 pricingLabel: effectivePricing.label,
                 salePrice: activeSalePrice,
                 salePricingLabel: activeSalePrice === null ? null : getPricingDurationLabel(lot.activeSaleDurationUnit ?? lot.salePriceDurationUnit, lot.activeSaleDurationValue ?? lot.salePriceDurationValue),
-                basePricingTiers: basePricingTiers.map(toRecommendationTier),
-                salePricingTiers: salePricingTiers.length > 0 ? salePricingTiers.map(toRecommendationTier) : null,
-                activeSalePricingTiers: activeSalePricingTiers.length > 0 ? activeSalePricingTiers.map(toRecommendationTier) : null,
+                basePricingTiers: hasKnownPricing ? basePricingTiers.map(toRecommendationTier) : [],
+                salePricingTiers: hasKnownPricing && salePricingTiers.length > 0 ? salePricingTiers.map(toRecommendationTier) : null,
+                activeSalePricingTiers: hasKnownPricing && activeSalePricingTiers.length > 0 ? activeSalePricingTiers.map(toRecommendationTier) : null,
                 saleStartsAt: lot.saleStartsAt ?? null,
                 saleEndsAt: lot.saleEndsAt ?? null,
                 recommendationCount: lot.recommendationCount ?? 0,

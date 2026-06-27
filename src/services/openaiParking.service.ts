@@ -10,6 +10,7 @@ export type ParkingRecommendationLot = {
   name: string;
   distanceMeters: number;
   price: number;
+  hasKnownPricing?: boolean;
   pricingLabel: string;
   salePrice: number | null;
   salePricingLabel: string | null;
