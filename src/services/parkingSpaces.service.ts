@@ -10,6 +10,9 @@ import {
   arrayUnion,
   onSnapshot,
   query,
+  where,
+  writeBatch,
+  deleteDoc,
 } from "firebase/firestore";
 import { getCurrentBookingUserDocId, type BookingHistorySnapshot } from "./users.service";
 
@@ -34,8 +37,210 @@ export type ParkingSpaceDoc = {
   dateTime: string; // ISO string
   customerId?: number | null; // מזהה לקוח בלבד
   reservation?: ParkingReservationDoc | null;
+  spotType?: string | null;
+  floorId?: string | null;
+  floorName?: string | null;
+  sectionId?: string | null;
+  sectionName?: string | null;
+  sensorId?: string | null;
+  externalStatus?: string | null;
+  outOfServiceReason?: string | null;
+  lastChangedAt?: string | null;
+  charger?: {
+    connectorType?: string | null;
+    powerKw?: number | null;
+    isCharging?: boolean | null;
+  } | null;
+  reservedFor?: string | null;
+  externalSource?: string | null;
   createdAt?: any;
 };
+
+type ParkingLotSyncSpot = {
+  spotId?: string;
+  type?: string;
+  status?: string;
+  sensorId?: string;
+  reason?: string;
+  lastChangedAt?: string;
+  reservedFor?: string;
+  charger?: {
+    connectorType?: string;
+    powerKw?: number;
+    isCharging?: boolean;
+  };
+};
+
+type ParkingLotSyncSection = {
+  sectionId?: string;
+  name?: string;
+  spots?: ParkingLotSyncSpot[];
+};
+
+type ParkingLotSyncFloor = {
+  floorId?: string;
+  name?: string;
+  sections?: ParkingLotSyncSection[];
+};
+
+type ParkingLotSyncPayload = {
+  parkingLot?: {
+    id?: string;
+    liveAvailability?: {
+      dataSource?: string;
+    };
+    floors?: ParkingLotSyncFloor[];
+  };
+};
+
+export type ParkingLotSyncSummary = {
+  totalSpacesInFile: number;
+  createdCount: number;
+  updatedCount: number;
+  deletedCount: number;
+  syncedCount: number;
+};
+
+type ParkingLotSyncOptions = {
+  replaceExisting?: boolean;
+};
+
+function normalizeImportedSpaceStatus(status: string | undefined): SpaceStatus {
+  if (status === "available") {
+    return "available";
+  }
+
+  if (status === "reserved") {
+    return "reserved";
+  }
+
+  return "occupied";
+}
+
+function flattenParkingLotSyncSpots(payload: ParkingLotSyncPayload) {
+  const floors = Array.isArray(payload.parkingLot?.floors) ? payload.parkingLot?.floors : [];
+  const externalSource = payload.parkingLot?.liveAvailability?.dataSource ?? null;
+  const flattened: Array<{
+    spotId: string;
+    data: Omit<ParkingSpaceDoc, "parkingLotId" | "parkingSpaceId" | "createdAt">;
+  }> = [];
+
+  for (const floor of floors) {
+    const sections = Array.isArray(floor.sections) ? floor.sections : [];
+
+    for (const section of sections) {
+      const spots = Array.isArray(section.spots) ? section.spots : [];
+
+      for (const spot of spots) {
+        const spotId = String(spot.spotId ?? "").trim();
+
+        if (!spotId) {
+          continue;
+        }
+
+        flattened.push({
+          spotId,
+          data: {
+            status: normalizeImportedSpaceStatus(spot.status),
+            dateTime: spot.lastChangedAt ?? new Date().toISOString(),
+            customerId: null,
+            reservation: null,
+            spotType: spot.type ?? null,
+            floorId: floor.floorId ?? null,
+            floorName: floor.name ?? null,
+            sectionId: section.sectionId ?? null,
+            sectionName: section.name ?? null,
+            sensorId: spot.sensorId ?? null,
+            externalStatus: spot.status ?? null,
+            outOfServiceReason: spot.reason ?? null,
+            lastChangedAt: spot.lastChangedAt ?? null,
+            charger: spot.charger
+              ? {
+                  connectorType: spot.charger.connectorType ?? null,
+                  powerKw: typeof spot.charger.powerKw === "number" ? spot.charger.powerKw : null,
+                  isCharging: typeof spot.charger.isCharging === "boolean" ? spot.charger.isCharging : null,
+                }
+              : null,
+            reservedFor: spot.reservedFor ?? null,
+            externalSource,
+          },
+        });
+      }
+    }
+  }
+
+  return flattened;
+}
+
+export async function syncParkingSpacesFromJson(
+  parkingLotId: string,
+  payload: ParkingLotSyncPayload,
+  options: ParkingLotSyncOptions = {}
+): Promise<ParkingLotSyncSummary> {
+  const normalizedLotId = parkingLotId.trim();
+  const replaceExisting = options.replaceExisting === true;
+
+  if (!normalizedLotId) {
+    throw new Error("חסר מזהה חניון לסנכרון.");
+  }
+
+  const flattenedSpots = flattenParkingLotSyncSpots(payload);
+
+  if (!flattenedSpots.length) {
+    throw new Error("הקובץ לא מכיל מקומות חנייה בפורמט נתמך.");
+  }
+
+  const existingSnapshot = await getDocs(query(collection(db, spacesCol), where("parkingLotId", "==", normalizedLotId)));
+  const existingIds = new Set(existingSnapshot.docs.map((spaceDoc) => spaceDoc.id));
+  const importedIds = new Set(flattenedSpots.map((spot) => spot.spotId));
+
+  let createdCount = 0;
+  let updatedCount = 0;
+  let deletedCount = 0;
+
+  for (let start = 0; start < flattenedSpots.length; start += 400) {
+    const batch = writeBatch(db);
+    const currentChunk = flattenedSpots.slice(start, start + 400);
+
+    for (const spot of currentChunk) {
+      const spaceRef = doc(db, spacesCol, spot.spotId);
+      batch.set(
+        spaceRef,
+        {
+          parkingSpaceId: spot.spotId,
+          parkingLotId: normalizedLotId,
+          ...spot.data,
+        } satisfies ParkingSpaceDoc,
+        { merge: true }
+      );
+
+      if (existingIds.has(spot.spotId)) {
+        updatedCount += 1;
+      } else {
+        createdCount += 1;
+      }
+    }
+
+    await batch.commit();
+  }
+
+  if (replaceExisting) {
+    const staleDocs = existingSnapshot.docs.filter((spaceDoc) => !importedIds.has(spaceDoc.id));
+
+    for (const staleDoc of staleDocs) {
+      await deleteDoc(doc(db, spacesCol, staleDoc.id));
+      deletedCount += 1;
+    }
+  }
+
+  return {
+    totalSpacesInFile: flattenedSpots.length,
+    createdCount,
+    updatedCount,
+    deletedCount,
+    syncedCount: flattenedSpots.length,
+  };
+}
 
 export type UserBookingRow = {
   spaceId: string;

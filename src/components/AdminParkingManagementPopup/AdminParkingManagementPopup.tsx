@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ParkingLotDoc } from "../../services/parkingLots.service";
-import type { ParkingSpaceDoc, SpaceStatus } from "../../services/parkingSpaces.service";
+import {
+  syncParkingSpacesFromJson,
+  type ParkingLotSyncSummary,
+  type ParkingSpaceDoc,
+  type SpaceStatus,
+} from "../../services/parkingSpaces.service";
 import type { UserListItem } from "../../services/users.service";
 import "./AdminParkingManagementPopup.css";
 
@@ -81,6 +86,36 @@ export default function AdminParkingManagementPopup({
   const [searchTerm, setSearchTerm] = useState("");
   const [isRendered, setIsRendered] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
+  const [syncingLotId, setSyncingLotId] = useState<string | null>(null);
+  const [syncFeedback, setSyncFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
+
+  const handleSyncLotSpaces = async (lot: ReturnType<typeof lotsWithStats>[number], file: File) => {
+    setSyncFeedback(null);
+    setSyncingLotId(lot.id);
+
+    try {
+      const replaceExisting = window.confirm(
+        "האם להחליף את מקומות החנייה הקיימים של החניון?\n\nאישור = להחליף ולמחוק מקומות קיימים שלא מופיעים בקובץ.\nביטול = למזג בלבד בלי למחוק מקומות קיימים."
+      );
+      const fileText = await file.text();
+      const payload = JSON.parse(fileText) as Parameters<typeof syncParkingSpacesFromJson>[1];
+      const result: ParkingLotSyncSummary = await syncParkingSpacesFromJson(lot.id, payload, {
+        replaceExisting,
+      });
+
+      setSyncFeedback({
+        kind: "success",
+        message: replaceExisting
+          ? `סונכרנו ${result.syncedCount} מקומות לחניון ${lot.name}. נוצרו ${result.createdCount}, עודכנו ${result.updatedCount}, ונמחקו ${result.deletedCount} מקומות שלא הופיעו בקובץ.`
+          : `סונכרנו ${result.syncedCount} מקומות לחניון ${lot.name}. נוצרו ${result.createdCount} ועודכנו ${result.updatedCount}.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "סנכרון מקומות החנייה נכשל.";
+      setSyncFeedback({ kind: "error", message });
+    } finally {
+      setSyncingLotId(null);
+    }
+  };
 
   useEffect(() => {
     let closeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -212,6 +247,11 @@ export default function AdminParkingManagementPopup({
         {!parkingLotsLoading && parkingSpacesLoading ? <p className="admin-parking-popup__state">טוען את נתוני המקומות...</p> : null}
         {parkingLotsError ? <p className="admin-parking-popup__state admin-parking-popup__state--error">{parkingLotsError}</p> : null}
         {parkingSpacesError ? <p className="admin-parking-popup__state admin-parking-popup__state--error">{parkingSpacesError}</p> : null}
+        {syncFeedback ? (
+          <p className={`admin-parking-popup__state ${syncFeedback.kind === "error" ? "admin-parking-popup__state--error" : "admin-parking-popup__state--success"}`}>
+            {syncFeedback.message}
+          </p>
+        ) : null}
 
         {!parkingLotsLoading && !parkingLotsError ? (
           <div className="admin-parking-popup__layout">
@@ -231,23 +271,46 @@ export default function AdminParkingManagementPopup({
               <div className="admin-parking-popup__lot-list">
                 {lotsWithStats.length ? (
                   lotsWithStats.map((lot) => (
-                    <button
+                    <div
                       key={lot.id}
-                      type="button"
                       className={`admin-parking-popup__lot-card ${selectedLotId === lot.id ? "admin-parking-popup__lot-card--active" : ""}`}
-                      onClick={() => setSelectedLotId(lot.id)}
                     >
-                      <div className="admin-parking-popup__lot-copy">
-                        <strong>{lot.name}</strong>
-                        <span>{lot.address}</span>
-                      </div>
-                      <div className="admin-parking-popup__lot-meta">
-                        <span>סה״כ {lot.totalSpaces}</span>
-                        <span>פנויים {lot.availableSpaces}</span>
-                        <span>מוזמנים {lot.reservedSpaces}</span>
-                        <span>תפוסים {lot.occupiedSpaces}</span>
-                      </div>
-                    </button>
+                      <button
+                        type="button"
+                        className="admin-parking-popup__lot-card-button"
+                        onClick={() => setSelectedLotId(lot.id)}
+                      >
+                        <div className="admin-parking-popup__lot-copy">
+                          <strong>{lot.name}</strong>
+                          <span>{lot.address}</span>
+                        </div>
+                        <div className="admin-parking-popup__lot-meta">
+                          <span>סה״כ {lot.totalSpaces}</span>
+                          <span>פנויים {lot.availableSpaces}</span>
+                          <span>מוזמנים {lot.reservedSpaces}</span>
+                          <span>תפוסים {lot.occupiedSpaces}</span>
+                        </div>
+                      </button>
+
+                      <label className="admin-parking-popup__sync-button">
+                        <input
+                          type="file"
+                          accept="application/json,.json"
+                          className="admin-parking-popup__sync-input"
+                          disabled={syncingLotId === lot.id}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+
+                            if (file) {
+                              void handleSyncLotSpaces(lot, file);
+                            }
+
+                            event.currentTarget.value = "";
+                          }}
+                        />
+                        {syncingLotId === lot.id ? "מסנכרן חניות..." : "סנכרון מקומות חנייה"}
+                      </label>
+                    </div>
                   ))
                 ) : (
                   <p className="admin-parking-popup__empty">לא נמצאו חניונים עבור החיפוש הזה.</p>

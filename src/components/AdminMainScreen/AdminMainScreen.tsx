@@ -102,22 +102,18 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
   };
 
   const handleOpenUserManagement = () => {
-    setActivePage("users");
     setShowUserManagementPopup(true);
   };
 
   const handleOpenParkingManagement = () => {
-    setActivePage("lots");
     setShowParkingManagementPopup(true);
   };
 
   const handleOpenSystemActivity = () => {
-    setActivePage("system");
     setShowSystemActivityPopup(true);
   };
 
   const handleOpenUserSettings = () => {
-    setActivePage("settings");
     setShowUserSettingsPopup(true);
   };
 

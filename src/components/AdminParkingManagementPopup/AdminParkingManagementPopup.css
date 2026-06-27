@@ -94,6 +94,10 @@
   color: #b42318;
 }
 
+.admin-parking-popup__state--success {
+  color: #0d7a52;
+}
+
 .admin-parking-popup__layout {
   display: grid;
   grid-template-columns: 340px minmax(0, 1fr);
@@ -147,7 +151,42 @@
   display: grid;
   gap: 12px;
   text-align: right;
+}
+
+.admin-parking-popup__lot-card-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  text-align: right;
   cursor: pointer;
+  font: inherit;
+}
+
+.admin-parking-popup__sync-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  border-radius: 14px;
+  border: 1px dashed rgba(10, 121, 179, 0.26);
+  background: rgba(10, 121, 179, 0.08);
+  color: #0a79b3;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+}
+
+.admin-parking-popup__sync-button:hover {
+  background: rgba(10, 121, 179, 0.14);
+  border-color: rgba(10, 121, 179, 0.38);
+  transform: translateY(-1px);
+}
+
+.admin-parking-popup__sync-input {
+  display: none;
 }
 
 .admin-parking-popup__lot-card--active {
