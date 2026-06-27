@@ -266,6 +266,7 @@
 
 .parking-info-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 24px;
 }
@@ -290,6 +291,59 @@
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.navigation-button {
+  background: linear-gradient(135deg, #0f766e 0%, #0ea5a3 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.28);
+}
+
+.navigation-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #115e59 0%, #0f766e 100%);
+  box-shadow: 0 6px 16px rgba(15, 118, 110, 0.36);
+  transform: translateY(-2px);
+}
+
+.navigation-button:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.navigation-button--active {
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.2), 0 8px 22px rgba(15, 118, 110, 0.32);
+}
+
+.parking-navigation-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.parking-navigation-panel__option {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+}
+
+.parking-navigation-panel__option:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+
+.parking-navigation-panel__option--waze {
+  background: linear-gradient(135deg, #1d9bf0 0%, #4cc9ff 100%);
+  box-shadow: 0 10px 22px rgba(29, 155, 240, 0.24);
+}
+
+.parking-navigation-panel__option--google {
+  background: linear-gradient(135deg, #15803d 0%, #22c55e 100%);
+  box-shadow: 0 10px 22px rgba(34, 197, 94, 0.24);
 }
   position: relative;
   overflow: hidden;
@@ -434,6 +488,14 @@
   opacity: 0.6;
 }
 
+.navigation-button:disabled {
+  background: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
 .recommend-button {
   background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
   color: #b45309;
@@ -515,4 +577,10 @@
 
 .parking-info-popup::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 520px) {
+  .parking-navigation-panel {
+    grid-template-columns: 1fr;
+  }
 }

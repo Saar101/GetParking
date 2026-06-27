@@ -12,6 +12,9 @@ import './ParkingInfo.css';
 interface ParkingSpace {
   id: string;
   address: string;
+  navigationAddress?: string;
+  navigationLat?: number;
+  navigationLng?: number;
   price: number;
   hidePricing?: boolean;
   bookingLocked?: boolean;
@@ -56,6 +59,7 @@ export default function ParkingInfo({
   const [showReservation, setShowReservation] = useState(false);
   const [showApproved, setShowApproved] = useState(false);
   const [showNoAvailability, setShowNoAvailability] = useState(false);
+  const [showNavigationOptions, setShowNavigationOptions] = useState(false);
   const [reservedSpaceId, setReservedSpaceId] = useState<string | null>(null);
   const [reservedByUserDocId, setReservedByUserDocId] = useState<string | null>(null);
   const [reservationData, setReservationData] = useState<ReservationData | null>(null);
@@ -74,6 +78,7 @@ export default function ParkingInfo({
       setShowReservation(false);
       setShowApproved(false);
       setShowNoAvailability(false);
+      setShowNavigationOptions(false);
       setReservedSpaceId(null);
       setReservedByUserDocId(null);
       setReservationData(null);
@@ -100,6 +105,7 @@ export default function ParkingInfo({
     setIsCelebrating(false);
     setShowReservation(false);
     setShowNoAvailability(false);
+    setShowNavigationOptions(false);
     setReservedSpaceId(null);
     setReservedByUserDocId(null);
   }, [isOpen, parkingSpace?.id]);
@@ -118,6 +124,8 @@ export default function ParkingInfo({
 
   const isRecommendationLocked = recommendationDisabled || hasRecommendedLocal;
   const isBookingLocked = Boolean(parkingSpace.bookingLocked);
+  const navigationAddress = (parkingSpace.navigationAddress ?? parkingSpace.address.replace(' • ', ', ')).trim();
+  const hasNavigationCoordinates = Number.isFinite(parkingSpace.navigationLat) && Number.isFinite(parkingSpace.navigationLng);
   const fallbackSaleRange =
     parkingSpace.hasActiveSale && parkingSpace.salePriceText
       ? {
@@ -142,6 +150,26 @@ export default function ParkingInfo({
     setIsCelebrating(true);
     window.setTimeout(() => setIsCelebrating(false), 750);
     onRecommend();
+  };
+
+  const openExternalNavigation = (provider: 'waze' | 'google-maps') => {
+    if (!hasNavigationCoordinates && !navigationAddress) {
+      return;
+    }
+
+    const encodedAddress = encodeURIComponent(navigationAddress);
+    const lat = parkingSpace.navigationLat;
+    const lng = parkingSpace.navigationLng;
+    const targetUrl = provider === 'waze'
+      ? hasNavigationCoordinates
+        ? `https://www.waze.com/ul?ll=${lat},${lng}&navigate=yes`
+        : `https://www.waze.com/ul?q=${encodedAddress}&navigate=yes`
+      : hasNavigationCoordinates
+        ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`
+        : `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+    setShowNavigationOptions(false);
   };
 
   const handleReservationConfirm = async (data: ReservationData) => {
@@ -270,6 +298,13 @@ export default function ParkingInfo({
         </div>
 
         <div className="parking-info-actions">
+          <button
+            className={`action-button navigation-button ${showNavigationOptions ? 'navigation-button--active' : ''}`}
+            onClick={() => setShowNavigationOptions((current) => !current)}
+            disabled={!hasNavigationCoordinates && !navigationAddress}
+          >
+            🧭 נווט
+          </button>
           <button 
             className="action-button book-button"
             onClick={() => {
@@ -287,6 +322,25 @@ export default function ParkingInfo({
             {isRecommendationLocked ? '✅ הומלץ' : '👍 המלצה'}
           </button>
         </div>
+
+        {showNavigationOptions ? (
+          <div className="parking-navigation-panel">
+            <button
+              type="button"
+              className="parking-navigation-panel__option parking-navigation-panel__option--waze"
+              onClick={() => openExternalNavigation('waze')}
+            >
+              פתח ב-Waze
+            </button>
+            <button
+              type="button"
+              className="parking-navigation-panel__option parking-navigation-panel__option--google"
+              onClick={() => openExternalNavigation('google-maps')}
+            >
+              פתח ב-Google Maps
+            </button>
+          </div>
+        ) : null}
 
         <ParkingReservation
           isOpen={showReservation}

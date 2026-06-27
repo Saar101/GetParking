@@ -15,6 +15,9 @@ type FavoritesTableProps = {
 type FavoriteParkingCard = {
   id: string;
   address: string;
+  navigationAddress?: string;
+  navigationLat?: number;
+  navigationLng?: number;
   price: number;
   hidePricing?: boolean;
   bookingLocked?: boolean;
@@ -37,10 +40,16 @@ function toFavoriteParkingCard(lot: ParkingLotMarker): FavoriteParkingCard {
   const recommendationCount = Math.max(0, lot.recommendationCount ?? 0);
   const rating = Math.min(5, Math.max(1, 1 + recommendationCount / 8));
   const effectivePricing = getEffectiveLotPricing(lot);
+  const navigationAddress = lot.address.includes(lot.name)
+    ? lot.address
+    : `${lot.address}, ${lot.name}`;
 
   return {
     id: lot.id,
     address: `${lot.name} • ${lot.address}`,
+    navigationAddress,
+    navigationLat: lot.location.lat,
+    navigationLng: lot.location.lng,
     price: effectivePricing.price,
     hidePricing: isGovernmentImportedLot,
     bookingLocked: isGovernmentImportedLot,

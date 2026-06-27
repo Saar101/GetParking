@@ -30,6 +30,9 @@ type ParkingLotMarker = ParkingLotDoc & {
 type ParkingInfoCard = {
   id: string;
   address: string;
+  navigationAddress?: string;
+  navigationLat?: number;
+  navigationLng?: number;
   price: number;
   hidePricing?: boolean;
   bookingLocked?: boolean;
@@ -214,10 +217,16 @@ function toParkingInfoCard(
     ? `₪${primarySaleTier.price} ${getPricingTierLabel(primarySaleTier)}`
     : undefined;
   const displayedPricingRanges = buildDisplayedPricingRanges(basePricingTiers, activeSalePricingTiers);
+  const navigationAddress = lot.address.includes(lot.name)
+    ? lot.address
+    : `${lot.address}, ${lot.name}`;
 
   return {
     id: lot.id,
     address: `${lot.name} • ${lot.address}`,
+    navigationAddress,
+    navigationLat: lot.location.lat,
+    navigationLng: lot.location.lng,
     price: effectivePricing.price,
     hidePricing: isGovernmentImportedLot,
     bookingLocked: isGovernmentImportedLot,
