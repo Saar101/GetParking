@@ -761,6 +761,7 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
         onClose={closeLotsPopup}
         onOpenLotDetails={openLotAnalyticsPopup}
         onShowAll={showAllSpaces}
+        onSyncCompleted={loadOwnerData}
       />
 
       <OwnerLotAnalyticsPopup

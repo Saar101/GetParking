@@ -117,6 +117,10 @@ function normalizeImportedSpaceStatus(status: string | undefined): SpaceStatus {
   return "occupied";
 }
 
+function buildImportedSpaceDocId(parkingLotId: string, spotId: string) {
+  return `${parkingLotId}__${spotId}`;
+}
+
 function flattenParkingLotSyncSpots(payload: ParkingLotSyncPayload) {
   const floors = Array.isArray(payload.parkingLot?.floors) ? payload.parkingLot?.floors : [];
   const externalSource = payload.parkingLot?.liveAvailability?.dataSource ?? null;
@@ -192,7 +196,8 @@ export async function syncParkingSpacesFromJson(
 
   const existingSnapshot = await getDocs(query(collection(db, spacesCol), where("parkingLotId", "==", normalizedLotId)));
   const existingIds = new Set(existingSnapshot.docs.map((spaceDoc) => spaceDoc.id));
-  const importedIds = new Set(flattenedSpots.map((spot) => spot.spotId));
+  const importedIds = new Set(flattenedSpots.map((spot) => buildImportedSpaceDocId(normalizedLotId, spot.spotId)));
+  const legacyDocIdsToDelete = new Set<string>();
 
   let createdCount = 0;
   let updatedCount = 0;
@@ -203,7 +208,9 @@ export async function syncParkingSpacesFromJson(
     const currentChunk = flattenedSpots.slice(start, start + 400);
 
     for (const spot of currentChunk) {
-      const spaceRef = doc(db, spacesCol, spot.spotId);
+      const targetDocId = buildImportedSpaceDocId(normalizedLotId, spot.spotId);
+      const legacyDocId = spot.spotId;
+      const spaceRef = doc(db, spacesCol, targetDocId);
       batch.set(
         spaceRef,
         {
@@ -214,10 +221,15 @@ export async function syncParkingSpacesFromJson(
         { merge: true }
       );
 
-      if (existingIds.has(spot.spotId)) {
+      if (existingIds.has(targetDocId) || existingIds.has(legacyDocId)) {
         updatedCount += 1;
       } else {
         createdCount += 1;
+      }
+
+      if (legacyDocId !== targetDocId && existingIds.has(legacyDocId)) {
+        batch.delete(doc(db, spacesCol, legacyDocId));
+        legacyDocIdsToDelete.add(legacyDocId);
       }
     }
 
@@ -225,7 +237,9 @@ export async function syncParkingSpacesFromJson(
   }
 
   if (replaceExisting) {
-    const staleDocs = existingSnapshot.docs.filter((spaceDoc) => !importedIds.has(spaceDoc.id));
+    const staleDocs = existingSnapshot.docs.filter(
+      (spaceDoc) => !importedIds.has(spaceDoc.id) && !legacyDocIdsToDelete.has(spaceDoc.id)
+    );
 
     for (const staleDoc of staleDocs) {
       await deleteDoc(doc(db, spacesCol, staleDoc.id));
