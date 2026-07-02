@@ -60,7 +60,7 @@ export type ParkingFollowupResult = {
 
 const API_BASE = (import.meta.env.VITE_PARKING_API_BASE_URL ?? "").replace(/\/$/, "");
 
-const API_FALLBACK_BASES = ["", "http://localhost:5174", "http://localhost:5175"];
+const API_FALLBACK_BASES = ["", "http://localhost:5176", "http://localhost:5175", "http://localhost:5174"];
 
 function buildApiBaseCandidates() {
   const candidates = API_BASE ? [API_BASE, ...API_FALLBACK_BASES] : API_FALLBACK_BASES;
