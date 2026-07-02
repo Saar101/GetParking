@@ -240,14 +240,6 @@ Design notes:
 5. Start the frontend with `npm run dev`.
 6. Open the app and test login, map search, and role-based flows.
 
-## Future README Enhancements
-
-Good next additions for a public-facing repository:
-
-- Real screenshots or GIFs for customer, owner, and admin flows.
-- A sample `.env.example` file.
-- Firestore schema documentation.
-- Deployment instructions for Firebase Hosting, Vercel, or a custom Node host.
 
 ## License
 
