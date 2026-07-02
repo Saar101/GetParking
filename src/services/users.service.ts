@@ -1,4 +1,5 @@
 import { auth, db } from "../firebase";
+import { updateProfile } from "firebase/auth";
 import {
   arrayUnion,
   arrayRemove,
@@ -518,9 +519,10 @@ export async function updateCurrentUserSettings(
   patch: Partial<UserSettings>
 ): Promise<void> {
   const userDocId = await getCurrentBookingUserDocId();
+  const normalizedDisplayName = patch.displayName?.trim();
 
   const payload: Partial<UserDoc> = {
-    ...(patch.displayName !== undefined ? { name: patch.displayName.trim() || DEFAULT_USER_SETTINGS.displayName } : {}),
+    ...(patch.displayName !== undefined ? { name: normalizedDisplayName || DEFAULT_USER_SETTINGS.displayName } : {}),
     ...(patch.phoneNumber !== undefined ? { phoneNumber: patch.phoneNumber.trim() } : {}),
     ...(patch.licensePlate !== undefined
       ? { licensePlate: patch.licensePlate.trim().toUpperCase() }
@@ -543,4 +545,10 @@ export async function updateCurrentUserSettings(
   };
 
   await setDoc(doc(db, usersCol, userDocId), payload, { merge: true });
+
+  if (patch.displayName !== undefined && auth.currentUser) {
+    await updateProfile(auth.currentUser, {
+      displayName: normalizedDisplayName || DEFAULT_USER_SETTINGS.displayName,
+    });
+  }
 }
