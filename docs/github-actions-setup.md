@@ -48,6 +48,7 @@ Create these as GitHub Actions repository secrets:
 
 ```text
 VITE_FIREBASE_API_KEY=<your Firebase Web API key>
+VITE_GOOGLE_MAPS_API_KEY=<your Google Maps JavaScript API key>
 FIREBASE_TOKEN=<firebase login:ci token>
 GCP_WORKLOAD_IDENTITY_PROVIDER=projects/179171539484/locations/global/workloadIdentityPools/github-actions/providers/github
 GCP_SERVICE_ACCOUNT=getparking-run-sa@getparking-81f41.iam.gserviceaccount.com
