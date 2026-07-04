@@ -131,31 +131,6 @@ function buildSmoothPath(points: Array<{ x: number; y: number }>) {
   return path;
 }
 
-function shouldShowAxisLabel(index: number, total: number) {
-  if (total >= 24) {
-    return index % 6 === 0 || index === total - 1;
-  }
-
-  if (total <= 6) {
-    return true;
-  }
-
-  if (index === 0 || index === total - 1) {
-    return true;
-  }
-
-  const step = Math.ceil(total / 5);
-  return index % step === 0;
-}
-
-function formatAxisLabel(label: string, total: number) {
-  if (total >= 24 && label.includes(":")) {
-    return label.slice(0, 2);
-  }
-
-  return label;
-}
-
 function buildRangeChartData(bookings: Array<BookingHistorySnapshot & { spaceId: string; date: string }>, unit: RangeUnit, amount: number) {
   const safeAmount = Math.max(1, amount);
   const now = new Date();
@@ -442,7 +417,7 @@ function MiniLineChart({
 
   const linePath = buildSmoothPath(points);
   const areaPath = `${linePath} L ${points[points.length - 1]?.x ?? padding} ${height - padding} L ${points[0]?.x ?? padding} ${height - padding} Z`;
-  const peakPoint = data.reduce(
+  const peakPoint = data.reduce<{ value: number; index: number; label: string }>(
     (best, point, index) => {
       if (point.value > best.value) {
         return { value: point.value, index, label: point.label };
@@ -492,8 +467,8 @@ function MiniLineChart({
             top: tooltipShouldFlip ? `${activePoint.y + 28}px` : `${Math.max(18, activePoint.y - 18)}px`,
           }}
         >
-          <strong>{data[activeIndex]?.label}</strong>
-          <span>{formatNumber(data[activeIndex]?.value ?? 0)} {valueSuffix}</span>
+            <strong>{activeIndex === null ? "" : data[activeIndex]?.label}</strong>
+            <span>{formatNumber(activeIndex === null ? 0 : (data[activeIndex]?.value ?? 0))} {valueSuffix}</span>
         </div>
       ) : null}
       <svg

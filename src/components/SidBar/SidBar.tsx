@@ -68,7 +68,7 @@ export default function SidBar({
     { id: 'favorites', icon: '⭐', label: 'מועדפים' },
     { id: 'settings', icon: '⚙️', label: 'הגדרות' },
     { id: 'logout', icon: '🚪', label: 'התנתק' },
-  ];
+  ] satisfies Array<{ id: SidebarPageId; icon: string; label: string }>;
 
   const handleNavClick = (pageId: SidebarPageId) => {
     const nextPage = pageId;

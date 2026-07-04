@@ -17,6 +17,16 @@ type BubbleViewModel = {
   booking: UserBookingRow;
 };
 
+function getBubbleStatusRank(status: UserBookingRow["status"], historyOutcome: UserBookingRow["historyOutcome"]) {
+  const statusRank = { active: 0, future: 1, cancelled: 2, past: 2 } as const;
+
+  if (status === "past" && historyOutcome === "cancelled") {
+    return statusRank.cancelled;
+  }
+
+  return statusRank[status];
+}
+
 function formatBubbleTime(iso: string | null, fallback: string | null) {
   if (!iso) {
     return fallback ?? "";
@@ -108,9 +118,8 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
     const nextItems = bookings
       .filter((booking) => booking.status === "active" || booking.status === "future" || (booking.status === "past" && booking.historyOutcome === "cancelled"))
       .sort((left, right) => {
-        const statusRank = { active: 0, future: 1, cancelled: 2 } as const;
-        const leftRank = left.status === "past" && left.historyOutcome === "cancelled" ? statusRank.cancelled : statusRank[left.status];
-        const rightRank = right.status === "past" && right.historyOutcome === "cancelled" ? statusRank.cancelled : statusRank[right.status];
+        const leftRank = getBubbleStatusRank(left.status, left.historyOutcome);
+        const rightRank = getBubbleStatusRank(right.status, right.historyOutcome);
 
         const rankDiff = leftRank - rightRank;
 
@@ -227,18 +236,27 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
 
     const regularItems = visibleItems.filter((item) => !(item.status === "past" && item.historyOutcome === "cancelled"));
 
-    return [...cancelledItems, ...regularItems].slice(0, 3).map((item, index) => ({
-      id: `${item.spaceId}-${item.reservedFrom ?? item.reservedUntil ?? index}`,
-      title:
-        item.status === "active"
-          ? "החניה שלך פעילה"
-          : item.status === "past" && item.historyOutcome === "cancelled"
-            ? "הזמנה בוטלה"
-            : "יש לך חניה עתידית",
-      subtitle: buildBubbleText(item),
-      status: item.status === "past" && item.historyOutcome === "cancelled" ? "cancelled" : item.status,
-      booking: item,
-    }));
+    return [...cancelledItems, ...regularItems].slice(0, 3).map((item, index) => {
+      const status: BubbleViewModel["status"] =
+        item.status === "past" && item.historyOutcome === "cancelled"
+          ? "cancelled"
+          : item.status === "active"
+            ? "active"
+            : "future";
+
+      return {
+        id: `${item.spaceId}-${item.reservedFrom ?? item.reservedUntil ?? index}`,
+        title:
+          item.status === "active"
+            ? "החניה שלך פעילה"
+            : item.status === "past" && item.historyOutcome === "cancelled"
+              ? "הזמנה בוטלה"
+              : "יש לך חניה עתידית",
+        subtitle: buildBubbleText(item),
+        status,
+        booking: item,
+      };
+    });
   }, [items, hiddenCancelledKeys]);
 
   const persistHiddenCancelledKeys = (nextHiddenKeys: string[]) => {

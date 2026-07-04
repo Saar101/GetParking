@@ -11,6 +11,13 @@ import "./AdminParkingManagementPopup.css";
 
 type ParkingSpaceView = ParkingSpaceDoc & { id: string };
 type ParkingLotView = ParkingLotDoc & { id: string };
+type ParkingLotWithStats = ParkingLotView & {
+  totalSpaces: number;
+  availableSpaces: number;
+  reservedSpaces: number;
+  occupiedSpaces: number;
+  spaces: Array<ParkingSpaceView & { effectiveStatus: SpaceStatus }>;
+};
 
 type AdminParkingManagementPopupProps = {
   isOpen: boolean;
@@ -89,7 +96,7 @@ export default function AdminParkingManagementPopup({
   const [syncingLotId, setSyncingLotId] = useState<string | null>(null);
   const [syncFeedback, setSyncFeedback] = useState<{ kind: "success" | "error"; message: string } | null>(null);
 
-  const handleSyncLotSpaces = async (lot: ReturnType<typeof lotsWithStats>[number], file: File) => {
+  const handleSyncLotSpaces = async (lot: ParkingLotWithStats, file: File) => {
     setSyncFeedback(null);
     setSyncingLotId(lot.id);
 
@@ -188,7 +195,7 @@ export default function AdminParkingManagementPopup({
     return new Map(users.map((user) => [String(user.userId), user.name]));
   }, [users]);
 
-  const lotsWithStats = useMemo(() => {
+  const lotsWithStats = useMemo<ParkingLotWithStats[]>(() => {
     return filteredParkingLots.map((lot) => {
       const lotSpaces = parkingSpaces.filter((space) => space.parkingLotId === lot.id);
       const spacesWithEffectiveStatus = lotSpaces.map((space) => ({

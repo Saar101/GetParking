@@ -609,6 +609,10 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
     setSuccessMessage("");
 
     try {
+      if (!selectedLot || !sourceLot) {
+        throw new Error("לא נבחר חניון לשמירה.");
+      }
+
       await setLotPricing(selectedLot.id, pricingPatch);
       onSaved(selectedLot.id, pricingPatch);
       setSelectedLotSnapshot(await loadOwnerPricingLot(sourceLot));
@@ -641,6 +645,10 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
     setSuccessMessage("");
 
     try {
+      if (!selectedLot) {
+        throw new Error("לא נבחר חניון להסרת המבצע.");
+      }
+
       await setLotPricing(selectedLot.id, pricingPatch);
       onSaved(selectedLot.id, pricingPatch);
       setSelectedLotSnapshot(await loadOwnerPricingLot(sourceLot));
@@ -710,8 +718,8 @@ export default function OwnerPricingPopup({ isOpen, lots, onClose, onSaved }: Ow
                 <div className="owner-pricing-popup__summary-grid">
                   <article className="owner-pricing-popup__summary-card">
                     <span>מחיר פעיל</span>
-                    <strong>{loadingLot ? "טוען..." : `החל מ־₪${sourceLot.effectivePrice}`}</strong>
-                    <small>{loadingLot ? "" : sourceLot.effectivePriceLabel}</small>
+                    <strong>{loadingLot || !sourceLot ? "טוען..." : `החל מ־₪${sourceLot.effectivePrice}`}</strong>
+                    <small>{loadingLot || !sourceLot ? "" : sourceLot.effectivePriceLabel}</small>
                   </article>
                   <article className="owner-pricing-popup__summary-card">
                     <span>מדרגות בסיס</span>

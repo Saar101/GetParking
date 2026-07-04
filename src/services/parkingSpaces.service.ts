@@ -859,16 +859,16 @@ export async function listUserBookings(userDocId?: string): Promise<UserBookingR
  * Useful for owner dashboard to see reservation changes in real-time
  */
 export function subscribeToRealtimeParkingSpaces(
-  onUpdate: (spaces: ParkingSpaceDoc[]) => void,
+  onUpdate: (spaces: Array<ParkingSpaceDoc & { id: string }>) => void,
   onError?: (error: Error) => void
 ): () => void {
   const unsubscribe = onSnapshot(
     query(collection(db, spacesCol)),
     (snapshot) => {
-      const spaces: ParkingSpaceDoc[] = [];
+      const spaces: Array<ParkingSpaceDoc & { id: string }> = [];
       snapshot.docs.forEach((doc) => {
         if (doc.exists()) {
-          spaces.push({ id: doc.id, ...doc.data() } as ParkingSpaceDoc);
+          spaces.push({ id: doc.id, ...(doc.data() as ParkingSpaceDoc) });
         }
       });
       onUpdate(spaces);

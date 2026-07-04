@@ -63,35 +63,10 @@ type OccupiedCustomerView = {
   customerId: number | null;
 };
 
-type SpaceViewWithEffectiveStatus = SpaceView & {
-  effectiveStatus: SpaceStatus;
-};
-
-function countByStatus(spaces: SpaceView[], status: SpaceStatus) {
-  return spaces.filter((space) => space.status === status).length;
-}
-
 function getSpaceStatusLabel(status: SpaceStatus) {
   if (status === "occupied") return "תפוס";
   if (status === "reserved") return "מוזמן";
   return "פנוי";
-}
-
-function formatReservationDateTime(reservedFrom: string | null) {
-  if (!reservedFrom) {
-    return "-";
-  }
-
-  const date = new Date(reservedFrom);
-
-  if (Number.isNaN(date.getTime())) {
-    return reservedFrom;
-  }
-
-  return date.toLocaleString("he-IL", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
 }
 
 function formatReservationDatePart(reservedAt: string | null) {

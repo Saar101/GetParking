@@ -58,7 +58,7 @@ export type CustomerFields = {
 };
 
 export type OwnerFields = {
-  parkingLotId: string;
+  parkingLotId?: string | null;
   parkingLotIds?: string[];
 };
 

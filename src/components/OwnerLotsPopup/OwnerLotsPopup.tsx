@@ -15,6 +15,32 @@ export type OwnerLotsPopupLot = {
   recommendationHistoryByHour?: Record<string, number>;
   cardChecksCount?: number;
   cardChecksHistoryByHour?: Record<string, number>;
+  basePrice: number;
+  basePricingTiers?: Array<{
+    price: number;
+    durationUnit: "minutes" | "hours" | "day";
+    durationValue: number;
+  }>;
+  basePriceDurationUnit?: "minutes" | "hours" | "day";
+  basePriceDurationValue?: number;
+  salePrice?: number | null;
+  salePricingTiers?: Array<{
+    price: number;
+    durationUnit: "minutes" | "hours" | "day";
+    durationValue: number;
+  }> | null;
+  salePriceDurationUnit?: "minutes" | "hours" | "day" | null;
+  salePriceDurationValue?: number | null;
+  saleStartsAt?: string | null;
+  saleEndsAt?: string | null;
+  activeSalePrice?: number | null;
+  activeSalePricingTiers?: Array<{
+    price: number;
+    durationUnit: "minutes" | "hours" | "day";
+    durationValue: number;
+  }> | null;
+  activeSaleDurationUnit?: "minutes" | "hours" | "day" | null;
+  activeSaleDurationValue?: number | null;
 };
 
 type OwnerLotsPopupProps = {

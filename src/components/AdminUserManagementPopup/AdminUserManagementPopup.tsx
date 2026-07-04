@@ -72,7 +72,7 @@ function normalizeLotIds(existingLotIds: Array<string | null | undefined>, nextL
   return Array.from(new Set([...existingLotIds.filter(Boolean), nextLotId])) as string[];
 }
 
-function formatDeleteLotOption(lot: Pick<ParkingLotDoc, "id" | "name" | "address">) {
+function formatDeleteLotOption(lot: Pick<ParkingLotDoc & { id: string }, "id" | "name" | "address">) {
   const address = lot.address.trim();
   return address ? `${lot.name} • ${address}` : `${lot.name} • ${lot.id}`;
 }

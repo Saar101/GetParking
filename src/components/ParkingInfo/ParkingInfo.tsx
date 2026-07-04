@@ -133,6 +133,7 @@ export default function ParkingInfo({
           isSale: true,
           originalText: parkingSpace.originalPriceText,
           animateSale: true,
+          coveredBySale: false,
         }
       : null;
   const displayPricingRanges = (parkingSpace.pricingRanges ?? []).length > 0
