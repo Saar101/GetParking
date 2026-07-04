@@ -62,6 +62,31 @@ type NominatimResult = {
   place_id: number;
 };
 
+type CircleLike = {
+  setMap: (map: unknown) => void;
+  setRadius: (radius: number) => void;
+  getRadius: () => number;
+};
+
+type GoogleMapsCircleConstructor = new (options: {
+  strokeColor: string;
+  strokeOpacity: number;
+  strokeWeight: number;
+  fillColor: string;
+  fillOpacity: number;
+  map: unknown;
+  center: LatLng;
+  radius: number;
+}) => CircleLike;
+
+type GoogleMapsWindow = Window & typeof globalThis & {
+  google?: {
+    maps?: {
+      Circle?: GoogleMapsCircleConstructor;
+    };
+  };
+};
+
 const FALLBACK_CENTER: LatLng = {
   lat: 31.7683,
   lng: 35.2137, // Jerusalem
@@ -262,13 +287,14 @@ function MapContent({
   selectedLocation: { position: LatLng; address: string } | null;
   mapId: string | undefined;
   radius: number;
-  circleRef: React.MutableRefObject<any>;
+  circleRef: React.MutableRefObject<CircleLike | null>;
   parkingLots: ParkingLotMarker[];
   onParkingLotClick: (lot: ParkingLotMarker) => void;
 }) {
   const map = useMap();
   const animationRef = useRef<number | null>(null);
   const targetRadiusRef = useRef<number>(250);
+  targetRadiusRef.current = radius;
 
   // Create circle when location changes
   useEffect(() => {
@@ -288,8 +314,13 @@ function MapContent({
       }
 
       // Create circle with radius 0 for animation
-      targetRadiusRef.current = radius;
-      circleRef.current = new (window as any).google.maps.Circle({
+      const circleConstructor = (window as GoogleMapsWindow).google?.maps?.Circle;
+
+      if (!circleConstructor) {
+        return;
+      }
+
+      circleRef.current = new circleConstructor({
         strokeColor: "#0a79b3",
         strokeOpacity: 0.8,
         strokeWeight: 2,
@@ -303,7 +334,7 @@ function MapContent({
       // Animate the radius from 0 to target with bounce effect
       const startTime = Date.now();
       const animationDuration = 900; // 0.9 seconds for entrance animation
-      const targetRadius = radius;
+      const targetRadius = targetRadiusRef.current;
 
       const animateEntrance = () => {
         const elapsed = Date.now() - startTime;
@@ -348,7 +379,7 @@ function MapContent({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [map, selectedLocation]);
+  }, [circleRef, map, selectedLocation]);
 
   // Smooth animation for radius changes
   useEffect(() => {
@@ -414,7 +445,7 @@ function MapContent({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [radius, selectedLocation]);
+  }, [circleRef, radius, selectedLocation]);
 
   return (
     <>
@@ -495,7 +526,7 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
   const [selectedParkingLot, setSelectedParkingLot] = useState<ParkingInfoCard | null>(null);
   const [recommendedLotIds, setRecommendedLotIds] = useState<string[]>([]);
   const [isRecommending, setIsRecommending] = useState(false);
-  const circleRef = useRef<any>(null);
+  const circleRef = useRef<CircleLike | null>(null);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -893,7 +924,7 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
       <ParkingInfo
         isOpen={selectedParkingLot !== null}
         onClose={() => setSelectedParkingLot(null)}
-        parkingSpace={selectedParkingLot as any}
+        parkingSpace={selectedParkingLot}
         onBook={() => {}}
         onRecommend={handleRecommendParkingLot}
         recommendationDisabled={

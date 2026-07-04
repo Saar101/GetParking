@@ -108,8 +108,8 @@ export default function ChatConsultation({
       });
       setResult(response);
       setShowRankingBubble(true);
-    } catch (error: any) {
-      setErrorMessage(error?.message ?? "לא הצלחנו לקבל המלצה כרגע");
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : "לא הצלחנו לקבל המלצה כרגע");
     } finally {
       setIsLoading(false);
     }
@@ -171,13 +171,13 @@ export default function ChatConsultation({
           content: followup.reply,
         },
       ]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       setChatMessages((current) => [
         ...current,
         {
           role: "assistant",
           kind: "error",
-          content: error?.message ?? "לא הצלחתי לענות כרגע",
+          content: error instanceof Error ? error.message : "לא הצלחתי לענות כרגע",
         },
       ]);
     } finally {

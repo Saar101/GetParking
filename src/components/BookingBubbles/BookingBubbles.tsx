@@ -203,22 +203,28 @@ export default function BookingBubbles({ onOpenBookings }: BookingBubblesProps) 
     const storageKey = `getparking.hidden-cancelled-bookings.v1.${userDocId}`;
     const storedValue = window.localStorage.getItem(storageKey);
 
-    if (!storedValue) {
-      setHiddenCancelledKeys([]);
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(storedValue) as unknown;
-      if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
-        setHiddenCancelledKeys(parsed);
+    const timeoutId = window.setTimeout(() => {
+      if (!storedValue) {
+        setHiddenCancelledKeys([]);
         return;
       }
-    } catch {
-      // ignore malformed local storage
-    }
 
-    setHiddenCancelledKeys([]);
+      try {
+        const parsed = JSON.parse(storedValue) as unknown;
+        if (Array.isArray(parsed) && parsed.every((item) => typeof item === "string")) {
+          setHiddenCancelledKeys(parsed);
+          return;
+        }
+      } catch {
+        // ignore malformed local storage
+      }
+
+      setHiddenCancelledKeys([]);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [userDocId]);
 
   const visibleBubbles = useMemo<BubbleViewModel[]>(() => {

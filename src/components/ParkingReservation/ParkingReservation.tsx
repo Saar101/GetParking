@@ -51,16 +51,11 @@ export default function ParkingReservation({
   const [submitting, setSubmitting] = useState(false);
   const durationOptions = Array.from({ length: 24 }, (_, index) => index + 1);
 
-  // Reset to current date/time when popup opens
-  const handleOpen = () => {
-    setDate(getCurrentDate());
-    setStartTime(useCurrentStartTime ? getCurrentTime() : initialStartTime);
-    setDurationHours(initialDurationHours);
-  };
-
   useEffect(() => {
     if (isOpen) {
-      handleOpen();
+      setDate(getCurrentDate());
+      setStartTime(useCurrentStartTime ? getCurrentTime() : initialStartTime);
+      setDurationHours(initialDurationHours);
     }
   }, [isOpen, initialDurationHours, initialStartTime, useCurrentStartTime]);
 

@@ -225,6 +225,51 @@ Recommended production frontend variable:
 VITE_PARKING_API_BASE_URL=https://your-cloud-run-service-url
 ```
 
+## GitHub Actions CI/CD
+
+The repository now includes two workflows under `.github/workflows`:
+
+- `ci.yml` runs `npm ci`, `npm run lint`, and `npm run build` on pushes to `main` and `master`, and on every pull request.
+- `deploy.yml` deploys the backend to Cloud Run first and then deploys the frontend to Firebase Hosting.
+
+### Required GitHub Variables
+
+Add these repository or environment variables before enabling the deploy workflow:
+
+```bash
+GCP_PROJECT_ID=getparking-81f41
+GCP_REGION=us-central1
+CLOUD_RUN_SERVICE=getparking-api
+FIREBASE_PROJECT_ID=getparking-81f41
+OPENAI_MODEL=gpt-4o-mini
+
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_firebase_app_id
+VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+VITE_PARKING_API_BASE_URL=https://your-cloud-run-service-url
+```
+
+### Required GitHub Secrets
+
+Add these secrets before running the workflows:
+
+```bash
+VITE_FIREBASE_API_KEY=your_firebase_web_api_key
+FIREBASE_TOKEN=your_firebase_cli_token
+GCP_WORKLOAD_IDENTITY_PROVIDER=projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
+GCP_SERVICE_ACCOUNT=github-actions@your-project.iam.gserviceaccount.com
+```
+
+Notes:
+
+- `VITE_FIREBASE_API_KEY` is technically public in the final client bundle, but using a secret keeps CI configuration simpler and avoids accidental logging.
+- `FIREBASE_TOKEN` can be generated with `firebase login:ci`.
+- The Cloud Run deploy step expects `OPENAI_API_KEY` to already exist in Google Secret Manager as `OPENAI_API_KEY` and binds `latest` on each deployment.
+- `VITE_PARKING_API_BASE_URL` should point to the live Cloud Run URL, for example `https://getparking-api-179171539484.us-central1.run.app`.
+
 ## Cloud Run Deployment
 
 The repository includes a production `Dockerfile` for the Express API.

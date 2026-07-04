@@ -153,8 +153,8 @@ export async function requestParkingRecommendation(
     );
 
     return result;
-  } catch (error: any) {
-    const message = String(error?.message ?? error ?? "");
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error ?? "");
 
     if (
       message.includes("Failed to fetch") ||
@@ -219,8 +219,8 @@ export async function requestParkingFollowup(
     );
 
     return result;
-  } catch (error: any) {
-    const message = String(error?.message ?? error ?? "");
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error ?? "");
 
     if (
       message.includes("Failed to fetch") ||

@@ -44,7 +44,7 @@ export type UserBase = {
   notificationsEnabled?: boolean;
   bookingHistoryDetails?: Record<string, BookingHistorySnapshot>;
   favoriteParkingLotIds?: string[];
-  createdAt?: any; // serverTimestamp (optional to keep it simple)
+  createdAt?: unknown; // serverTimestamp (optional to keep it simple)
   lastSeenAt?: string | null;
   isDisabled?: boolean;
   disabledAt?: string | null;
@@ -367,7 +367,13 @@ export function buildRecentUserActivitySummary(
     totalMatchingUsers: matchingUsers.length,
     usersWithActivity: filteredRecentUsers.length,
     buckets,
-    recentUsers: filteredRecentUsers.slice(0, 12).map(({ lastSeenMs, ...user }) => user),
+    recentUsers: filteredRecentUsers.slice(0, 12).map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      lastSeenAt: user.lastSeenAt,
+    })),
   };
 }
 
@@ -380,7 +386,7 @@ export async function getRecentUserActivitySummary(
 }
 
 export async function updateUser(userId: string, patch: Partial<UserDoc>) {
-  await updateDoc(doc(db, usersCol, userId), patch as any);
+  await updateDoc(doc(db, usersCol, userId), patch as DocumentData);
 }
 
 export async function deleteUserRecord(userId: string) {
@@ -391,33 +397,33 @@ export async function disableUserRecord(userId: string) {
   await updateDoc(doc(db, usersCol, userId), {
     isDisabled: true,
     disabledAt: toIsoNow(),
-  } as any);
+  } as DocumentData);
 }
 
 export async function enableUserRecord(userId: string) {
   await updateDoc(doc(db, usersCol, userId), {
     isDisabled: false,
     disabledAt: null,
-  } as any);
+  } as DocumentData);
 }
 
 /** Customer: add a parkingSpaceId to bookingHistory (IDs only) */
 export async function addBookingHistoryId(userId: string, spaceId: string) {
   await updateDoc(doc(db, usersCol, userId), {
     bookingHistory: arrayUnion(spaceId),
-  } as any);
+  } as DocumentData);
 }
 
 export async function addFavoriteParkingLotId(userId: string, lotId: string) {
   await updateDoc(doc(db, usersCol, userId), {
     favoriteParkingLotIds: arrayUnion(lotId),
-  } as any);
+  } as DocumentData);
 }
 
 export async function removeFavoriteParkingLotId(userId: string, lotId: string) {
   await updateDoc(doc(db, usersCol, userId), {
     favoriteParkingLotIds: arrayRemove(lotId),
-  } as any);
+  } as DocumentData);
 }
 
 /** Customer: set current linked lot/space */
@@ -429,12 +435,12 @@ export async function setCustomerCurrentParking(
   await updateDoc(doc(db, usersCol, userId), {
     parkingLotId,
     parkingSpaceId,
-  } as any);
+  } as DocumentData);
 }
 
 /** Admin: change role (use carefully) */
 export async function setUserRole(userId: string, role: UserRole) {
-  await updateDoc(doc(db, usersCol, userId), { role } as any);
+  await updateDoc(doc(db, usersCol, userId), { role } as DocumentData);
 }
 
 export async function getCurrentBookingUserDocId() {

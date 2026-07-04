@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties } from "react";
 import appTitleLogo from "../../assets/ChatGPT Image Jan 26, 2026, 08_22_00 PM.png";
 import homeBackgroundImage from "../../assets/home-background.png";
 import { getEffectiveLotPricing, listParkingLots, type ParkingLotPricingPatch, type ParkingPriceTier } from "../../services/parkingLots.service";
@@ -294,8 +294,12 @@ export default function OwnerMainScreen({ userName, onLogout }: OwnerMainScreenP
     }
   };
 
-  useEffect(() => {
+  const loadOwnerDataEffect = useEffectEvent(() => {
     void loadOwnerData();
+  });
+
+  useEffect(() => {
+    loadOwnerDataEffect();
   }, []);
 
   useEffect(() => {

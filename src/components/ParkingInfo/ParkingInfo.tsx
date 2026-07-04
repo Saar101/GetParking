@@ -40,7 +40,7 @@ interface ParkingSpace {
 interface ParkingInfoProps {
   isOpen: boolean;
   onClose: () => void;
-  parkingSpace: ParkingSpace;
+  parkingSpace: ParkingSpace | null;
   onBook: () => void;
   onRecommend: () => void;
   recommendationDisabled?: boolean;
@@ -67,21 +67,32 @@ export default function ParkingInfo({
   const [defaultArrivalTime, setDefaultArrivalTime] = useState("09:00");
   const [defaultArrivalTimeUsesCurrentTime, setDefaultArrivalTimeUsesCurrentTime] = useState(true);
 
+  const resetInteractionState = () => {
+    setHasRecommendedLocal(false);
+    setIsCelebrating(false);
+    setShowReservation(false);
+    setShowApproved(false);
+    setShowNoAvailability(false);
+    setShowNavigationOptions(false);
+    setReservedSpaceId(null);
+    setReservedByUserDocId(null);
+    setReservationData(null);
+  };
+
   const notifyBookingChange = () => {
     window.dispatchEvent(new CustomEvent("user-bookings-updated"));
   };
 
   useEffect(() => {
     if (!isOpen) {
-      setHasRecommendedLocal(false);
-      setIsCelebrating(false);
-      setShowReservation(false);
-      setShowApproved(false);
-      setShowNoAvailability(false);
-      setShowNavigationOptions(false);
-      setReservedSpaceId(null);
-      setReservedByUserDocId(null);
-      setReservationData(null);
+      const closeResetTimeoutId = window.setTimeout(() => {
+        resetInteractionState();
+      }, 0);
+
+      return () => {
+        window.clearTimeout(closeResetTimeoutId);
+      };
+
       return;
     }
 
@@ -101,13 +112,19 @@ export default function ParkingInfo({
 
     void loadDefaultDuration();
 
-    setHasRecommendedLocal(false);
-    setIsCelebrating(false);
-    setShowReservation(false);
-    setShowNoAvailability(false);
-    setShowNavigationOptions(false);
-    setReservedSpaceId(null);
-    setReservedByUserDocId(null);
+    const openResetTimeoutId = window.setTimeout(() => {
+      setHasRecommendedLocal(false);
+      setIsCelebrating(false);
+      setShowReservation(false);
+      setShowNoAvailability(false);
+      setShowNavigationOptions(false);
+      setReservedSpaceId(null);
+      setReservedByUserDocId(null);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(openResetTimeoutId);
+    };
   }, [isOpen, parkingSpace?.id]);
 
   useEffect(() => {

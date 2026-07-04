@@ -36,12 +36,15 @@ export default function OwnerSideBar({
       return;
     }
 
-    setAnimatedPage(activePage);
+    const pulseTimeoutId = window.setTimeout(() => {
+      setAnimatedPage(activePage);
+    }, 0);
     const timeoutId = window.setTimeout(() => {
       setAnimatedPage(null);
     }, 360);
 
     return () => {
+      window.clearTimeout(pulseTimeoutId);
       window.clearTimeout(timeoutId);
     };
   }, [activePage]);
@@ -70,7 +73,7 @@ export default function OwnerSideBar({
     { id: 'spaces', icon: '💸', label: 'מחירים ומבצעים' },
     { id: 'alerts', icon: '⚙️', label: 'הגדרות' },
     { id: 'logout', icon: '🚪', label: 'התנתק' },
-  ];
+  ] satisfies Array<{ id: OwnerSidebarPageId; icon: string; label: string }>;
 
   const handleNavClick = (pageId: OwnerSidebarPageId) => {
     const nextPage = pageId;

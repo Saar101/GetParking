@@ -38,12 +38,15 @@ export default function AdminSideBar({
       return;
     }
 
-    setAnimatedPage(activePage);
+    const pulseTimeoutId = window.setTimeout(() => {
+      setAnimatedPage(activePage);
+    }, 0);
     const timeoutId = window.setTimeout(() => {
       setAnimatedPage(null);
     }, 360);
 
     return () => {
+      window.clearTimeout(pulseTimeoutId);
       window.clearTimeout(timeoutId);
     };
   }, [activePage]);
@@ -69,7 +72,7 @@ export default function AdminSideBar({
     { id: 'system', icon: '🛡️', label: 'בקרת מערכת' },
     { id: 'settings', icon: '⚙️', label: 'הגדרות משתמש' },
     { id: 'logout', icon: '🚪', label: 'התנתק' },
-  ];
+  ] satisfies Array<{ id: AdminSidebarPageId; icon: string; label: string }>;
 
   const handleNavClick = (pageId: AdminSidebarPageId) => {
     setClickedPage(pageId);

@@ -1,5 +1,5 @@
 import { db } from "../firebase";
-import { collection, deleteDoc, doc, getDoc, getDocs, increment, query, setDoc, updateDoc, where } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, increment, query, setDoc, updateDoc, where, type DocumentData } from "firebase/firestore";
 import type { UserDoc, BookingHistorySnapshot } from "./users.service";
 
 export type ParkingLotDoc = {
@@ -31,7 +31,7 @@ export type ParkingLotDoc = {
   activeSaleDurationValue?: number | null;
   activeSaleUpdatedAt?: string | null;
   ownerId: number;
-  createdAt?: any;
+  createdAt?: unknown;
 };
 
 export type PricingDurationUnit = "minutes" | "hours" | "day";
@@ -97,7 +97,7 @@ export async function updateParkingLot(
   lotId: string,
   patch: Partial<ParkingLotDoc>
 ) {
-  await updateDoc(doc(db, lotsCol, lotId), patch as any);
+  await updateDoc(doc(db, lotsCol, lotId), patch as DocumentData);
 }
 
 export async function deleteParkingLot(lotId: string) {

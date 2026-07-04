@@ -1,5 +1,6 @@
 import { db } from "../firebase";
 import {
+  type DocumentData,
   doc,
   getDoc,
   getDocs,
@@ -27,7 +28,7 @@ export type ParkingReservationDoc = {
   reservedUntil: string;
   customerId?: number | null;
   reservedByUserDocId?: string | null;
-  createdAt?: any;
+  createdAt?: unknown;
 };
 
 export type ParkingSpaceDoc = {
@@ -53,7 +54,7 @@ export type ParkingSpaceDoc = {
   } | null;
   reservedFor?: string | null;
   externalSource?: string | null;
-  createdAt?: any;
+  createdAt?: unknown;
 };
 
 type ParkingLotSyncSpot = {
@@ -277,6 +278,7 @@ type ParkingLotDoc = {
 
 type UserDoc = {
   userId: number;
+  customerId?: number | null;
   name: string;
   role: UserRole;
   bookingHistory?: string[];
@@ -284,7 +286,7 @@ type UserDoc = {
   parkingLotId?: string | null; // לבעל חניון
   parkingLotIds?: string[] | null;
   parkingSpaceId?: string | null; // ללקוח (לא חובה כאן)
-  createdAt?: any;
+  createdAt?: unknown;
 };
 
 const spacesCol = "parkingSpaces";
@@ -315,7 +317,7 @@ export async function updateParkingSpace(
   spaceId: string,
   patch: Partial<ParkingSpaceDoc>
 ) {
-  await updateDoc(doc(db, spacesCol, spaceId), patch as any);
+  await updateDoc(doc(db, spacesCol, spaceId), patch as DocumentData);
 }
 
 export async function getAvailableParkingSpacesForLot(lotId: string) {
@@ -365,7 +367,7 @@ export async function resetAllParkingSpacesToAvailable() {
         customerId: null,
         reservation: null,
         dateTime: new Date().toISOString(),
-      } as any)
+      } as DocumentData)
     )
   );
 
@@ -449,7 +451,7 @@ export async function reserveParkingSpaceForCustomer(
 
     const userRef = doc(db, usersCol, bookingUserDocId);
     const userSnap = await tx.get(userRef);
-    const user = userSnap.exists() ? (userSnap.data() as any) : null;
+    const user = userSnap.exists() ? (userSnap.data() as UserDoc) : null;
     const parsedBookingUserDocId = Number.parseInt(bookingUserDocId, 10);
     const numericCustomerId =
       reservation.customerId ??
@@ -470,7 +472,7 @@ export async function reserveParkingSpaceForCustomer(
         reservedByUserDocId: bookingUserDocId,
         createdAt: new Date().toISOString(),
       },
-    } as any);
+    } as DocumentData);
 
     const parkingLotRef = doc(db, "parkingLots", space.parkingLotId);
 
@@ -478,7 +480,7 @@ export async function reserveParkingSpaceForCustomer(
       customerId: numericCustomerId,
       parkingSpaceId: spaceId,
       dateTime: new Date().toISOString(),
-    } as any);
+    } as DocumentData);
 
     if (userSnap.exists()) {
       tx.update(userRef, {
@@ -486,7 +488,7 @@ export async function reserveParkingSpaceForCustomer(
         parkingLotId: space.parkingLotId,
         parkingSpaceId: spaceId,
         bookingHistory: arrayUnion(spaceId),
-      } as any);
+      } as DocumentData);
     } else {
       tx.set(
         userRef,
@@ -581,13 +583,13 @@ export async function releaseParkingSpaceReservation(
       customerId: null,
       reservation: null,
       dateTime: new Date().toISOString(),
-    } as any);
+    } as DocumentData);
 
     tx.update(doc(db, "parkingLots", space.parkingLotId), {
       customerId: null,
       parkingSpaceId: null,
       dateTime: new Date().toISOString(),
-    } as any);
+    } as DocumentData);
 
     tx.set(
       userRef,
@@ -704,7 +706,7 @@ export async function occupySpaceForCustomer(
       bookingHistory: arrayUnion(spaceId),
       parkingLotId: space.parkingLotId,
       parkingSpaceId: spaceId,
-    } as any);
+    } as DocumentData);
 
     return { ok: true };
   });
@@ -887,16 +889,16 @@ export function subscribeToRealtimeParkingSpaces(
  * Useful for owner dashboard to see lot stats changes
  */
 export function subscribeToRealtimeParkingLots(
-  onUpdate: (lots: Array<{ id: string; [key: string]: any }>) => void,
+  onUpdate: (lots: Array<ParkingLotDoc & { id: string }>) => void,
   onError?: (error: Error) => void
 ): () => void {
   const unsubscribe = onSnapshot(
     query(collection(db, "parkingLots")),
     (snapshot) => {
-      const lots: Array<{ id: string; [key: string]: any }> = [];
+      const lots: Array<ParkingLotDoc & { id: string }> = [];
       snapshot.docs.forEach((doc) => {
         if (doc.exists()) {
-          lots.push({ id: doc.id, ...doc.data() });
+          lots.push({ id: doc.id, ...(doc.data() as ParkingLotDoc) });
         }
       });
       onUpdate(lots);

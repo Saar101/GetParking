@@ -137,9 +137,6 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
   };
 
   useEffect(() => {
-    setActivityUsersLoading(true);
-    setActivityUsersError("");
-
     const unsubscribe = subscribeToRealtimeUsers(
       (users) => {
         setActivityUsers(users);
@@ -157,9 +154,6 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
   }, []);
 
   useEffect(() => {
-    setParkingLotsLoading(true);
-    setParkingLotsError("");
-
     void listParkingLots()
       .then((lots) => {
         setParkingLots(lots as Array<ParkingLotDoc & { id: string }>);
@@ -186,9 +180,6 @@ export default function AdminMainScreen({ userName, onLogout }: AdminMainScreenP
   }, []);
 
   useEffect(() => {
-    setParkingSpacesLoading(true);
-    setParkingSpacesError("");
-
     void listParkingSpaces()
       .then((spaces) => {
         setParkingSpaces(spaces as Array<ParkingSpaceDoc & { id: string }>);

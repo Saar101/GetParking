@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   type ActivityRoleFilter,
   type ActivityTimeFilter,
@@ -98,21 +98,37 @@ export default function AdminSystemActivityPopup({
 }: AdminSystemActivityPopupProps) {
   const [roleFilter, setRoleFilter] = useState<ActivityRoleFilter>("both");
   const [timeFilter, setTimeFilter] = useState<ActivityTimeFilter>("7d");
-  const [buckets, setBuckets] = useState<RecentActivityBucket[]>([]);
-  const [totalMatchingUsers, setTotalMatchingUsers] = useState(0);
-  const [usersWithActivity, setUsersWithActivity] = useState(0);
-  const [recentUsers, setRecentUsers] = useState<RecentActivityUser[]>([]);
   const [isRendered, setIsRendered] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
 
+  const activitySummary = useMemo(() => {
+    if (!isOpen || !activityUsers.length) {
+      return {
+        buckets: [] as RecentActivityBucket[],
+        totalMatchingUsers: 0,
+        usersWithActivity: 0,
+        recentUsers: [] as RecentActivityUser[],
+      };
+    }
+
+    return buildRecentUserActivitySummary(activityUsers, roleFilter, timeFilter);
+  }, [activityUsers, isOpen, roleFilter, timeFilter]);
+
+  const { buckets, totalMatchingUsers, usersWithActivity, recentUsers } = activitySummary;
+
   useEffect(() => {
+    let openTimer: ReturnType<typeof setTimeout> | undefined;
     let closeTimer: ReturnType<typeof setTimeout> | undefined;
 
     if (isOpen) {
-      setIsRendered(true);
-      setIsClosing(false);
+      openTimer = setTimeout(() => {
+        setIsRendered(true);
+        setIsClosing(false);
+      }, 0);
     } else if (isRendered) {
-      setIsClosing(true);
+      openTimer = setTimeout(() => {
+        setIsClosing(true);
+      }, 0);
       closeTimer = setTimeout(() => {
         setIsRendered(false);
         setIsClosing(false);
@@ -120,27 +136,14 @@ export default function AdminSystemActivityPopup({
     }
 
     return () => {
+      if (openTimer) {
+        clearTimeout(openTimer);
+      }
       if (closeTimer) {
         clearTimeout(closeTimer);
       }
     };
   }, [isOpen, isRendered]);
-
-  useEffect(() => {
-    if (!isOpen || !activityUsers.length) {
-      setBuckets([]);
-      setTotalMatchingUsers(0);
-      setUsersWithActivity(0);
-      setRecentUsers([]);
-      return;
-    }
-
-    const summary = buildRecentUserActivitySummary(activityUsers, roleFilter, timeFilter);
-    setBuckets(summary.buckets);
-    setTotalMatchingUsers(summary.totalMatchingUsers);
-    setUsersWithActivity(summary.usersWithActivity);
-    setRecentUsers(summary.recentUsers);
-  }, [activityUsers, isOpen, roleFilter, timeFilter]);
 
   if (!isRendered) {
     return null;

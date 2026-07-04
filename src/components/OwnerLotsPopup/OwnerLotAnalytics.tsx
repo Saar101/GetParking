@@ -590,7 +590,7 @@ export default function OwnerLotAnalytics({ lot }: { lot: OwnerLotsPopupLot }) {
       isDisposed = true;
       window.clearInterval(intervalId);
     };
-  }, [lot.id]);
+  }, [lot]);
 
   useEffect(() => {
     if (!isRangePickerOpen) {

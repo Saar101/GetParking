@@ -34,12 +34,15 @@ export default function SidBar({
       return;
     }
 
-    setAnimatedPage(activePage);
+    const pulseTimeoutId = window.setTimeout(() => {
+      setAnimatedPage(activePage);
+    }, 0);
     const timeoutId = window.setTimeout(() => {
       setAnimatedPage(null);
     }, 360);
 
     return () => {
+      window.clearTimeout(pulseTimeoutId);
       window.clearTimeout(timeoutId);
     };
   }, [activePage]);
