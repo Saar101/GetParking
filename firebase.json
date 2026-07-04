@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "getparking-81f41",
     "public": "dist",
     "ignore": [
       "firebase.json",
