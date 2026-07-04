@@ -294,7 +294,10 @@ function MapContent({
   const map = useMap();
   const animationRef = useRef<number | null>(null);
   const targetRadiusRef = useRef<number>(250);
-  targetRadiusRef.current = radius;
+
+  useEffect(() => {
+    targetRadiusRef.current = radius;
+  }, [radius]);
 
   // Create circle when location changes
   useEffect(() => {

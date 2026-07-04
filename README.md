@@ -232,6 +232,8 @@ The repository now includes two workflows under `.github/workflows`:
 - `ci.yml` runs `npm ci`, `npm run lint`, and `npm run build` on pushes to `main` and `master`, and on every pull request.
 - `deploy.yml` deploys the backend to Cloud Run first and then deploys the frontend to Firebase Hosting.
 
+For the exact values and setup commands verified against the current project, see `docs/github-actions-setup.md`.
+
 ### Required GitHub Variables
 
 Add these repository or environment variables before enabling the deploy workflow:
