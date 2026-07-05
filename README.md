@@ -2,6 +2,15 @@
 
 Smart parking discovery and management platform built with React, TypeScript, Firebase, Google Maps, and an Express-based AI recommendation API.
 
+## Production Access
+
+- Frontend: https://getparking-81f41.web.app
+- Backend API: https://getparking-api-vgg57tm63a-uc.a.run.app
+- Hosting platform: Firebase Hosting
+- API runtime: Google Cloud Run
+
+The production application is intended for both desktop and mobile browsers. The current responsive baseline covers the authentication flow, landing screen, map search experience, and AI follow-up chat on phone-sized screens while preserving the desktop layout.
+
 GetParking serves three product surfaces in a single application:
 
 - Customer experience for discovering nearby parking, comparing pricing, booking spaces, saving favorites, and asking the AI assistant for guidance.
