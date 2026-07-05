@@ -310,3 +310,46 @@
     animation: none;
   }
 }
+
+@media (max-width: 768px) {
+  .gmt-open-button-main {
+    width: 180px;
+    height: 180px;
+    font-size: 18px;
+  }
+
+  .gmt-button-emoji {
+    font-size: 52px;
+  }
+
+  .gmt-button-text {
+    font-size: 18px;
+  }
+
+  .gp-title-container {
+    margin: 16px 0;
+  }
+
+  .gp-title-logo {
+    width: min(88vw, 420px);
+  }
+}
+
+@media (max-width: 480px) {
+  .gmt-open-button-main {
+    width: 160px;
+    height: 160px;
+  }
+
+  .gmt-button-emoji {
+    font-size: 46px;
+  }
+
+  .gmt-button-text {
+    font-size: 16px;
+  }
+
+  .gp-title-logo {
+    width: min(92vw, 320px);
+  }
+}
