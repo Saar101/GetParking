@@ -220,6 +220,8 @@
   min-height: 0;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 16px;
+  overflow: auto;
+  padding-inline-end: 4px;
 }
 
 .admin-parking-popup__hero-card {
@@ -333,6 +335,46 @@
 
   .admin-parking-popup__details {
     grid-template-rows: auto;
+  }
+}
+
+@media (min-width: 981px) and (max-height: 900px) {
+  .admin-parking-popup__overlay {
+    padding: 16px;
+  }
+
+  .admin-parking-popup {
+    max-height: calc(100vh - 32px);
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .admin-parking-popup__layout {
+    gap: 14px;
+  }
+
+  .admin-parking-popup__hero-card,
+  .admin-parking-popup__spaces-panel,
+  .admin-parking-popup__sidebar,
+  .admin-parking-popup__stat-card {
+    border-radius: 20px;
+  }
+
+  .admin-parking-popup__hero-card {
+    padding: 16px;
+  }
+
+  .admin-parking-popup__stat-card {
+    padding: 14px;
+  }
+
+  .admin-parking-popup__stat-card strong {
+    font-size: 1.55rem;
+  }
+
+  .admin-parking-popup__spaces-panel {
+    padding: 14px;
+    gap: 10px;
   }
 }
 
