@@ -218,7 +218,7 @@
 
 .admin-parking-popup__details {
   min-height: 0;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
   gap: 16px;
   overflow: auto;
   padding-inline-end: 4px;
@@ -291,15 +291,16 @@
 .admin-parking-popup__spaces-panel {
   padding: 18px;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
   gap: 14px;
-  min-height: 0;
-  overflow: hidden;
+  min-height: auto;
+  overflow: visible;
 }
 
 .admin-parking-popup__table-wrap {
-  overflow: auto;
-  min-height: 0;
+  overflow-x: auto;
+  overflow-y: visible;
+  min-height: auto;
   border-radius: 20px;
   border: 1px solid rgba(8, 80, 120, 0.1);
 }
