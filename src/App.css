@@ -286,6 +286,21 @@
   min-height: 100vh;
 }
 
+.customer-main-shell {
+  padding: 72px 24px 24px;
+}
+
+.customer-main-title-container {
+  margin-top: 84px;
+}
+
+.customer-main-cta-row {
+  margin-top: 48px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .app-shell--intro {
   animation: appShellReveal 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -297,6 +312,38 @@
   letter-spacing: 0.04em;
   color: #0a79b3;
   text-shadow: 0 2px 0 rgba(255, 255, 255, 0.9), 0 12px 32px rgba(7, 50, 74, 0.12);
+}
+
+@media (min-width: 769px) and (max-width: 1180px) {
+  .customer-main-shell {
+    padding: 56px 20px 20px;
+  }
+
+  .customer-main-title-container {
+    margin-top: 56px;
+  }
+
+  .customer-main-cta-row {
+    margin-top: 32px;
+  }
+
+  .gp-title-logo {
+    width: min(62vw, 500px);
+  }
+
+  .gmt-open-button-main {
+    width: 190px;
+    height: 190px;
+    font-size: 20px;
+  }
+
+  .gmt-button-emoji {
+    font-size: 56px;
+  }
+
+  .gmt-button-text {
+    font-size: 20px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

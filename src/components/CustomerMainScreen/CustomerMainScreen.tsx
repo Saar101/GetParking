@@ -80,12 +80,12 @@ export default function CustomerMainScreen({ userName, onLogout, showIntro }: Cu
           onPageChange={setActiveSidebarPage}
           userName={userName}
         />
-        <div style={{ padding: "72px 24px 24px" }}>
-          <div className="gp-title-container" style={{ marginTop: 84 }}>
+        <div className="customer-main-shell">
+          <div className="gp-title-container customer-main-title-container">
             <img src={appTitleLogo} alt="GetParking" className="gp-title-logo" />
           </div>
 
-          <div style={{ marginTop: 48, display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <div className="customer-main-cta-row">
             <button
               className="gmt-open-button-main"
               onClick={() => setShowMap(true)}
