@@ -301,6 +301,13 @@
   align-items: center;
 }
 
+@media (min-width: 769px) {
+  .customer-main-shell {
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+}
+
 .app-shell--intro {
   animation: appShellReveal 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -343,6 +350,71 @@
 
   .gmt-button-text {
     font-size: 20px;
+  }
+}
+
+@media (min-width: 769px) and (max-height: 940px) {
+  .customer-main-shell {
+    padding-top: 44px;
+    padding-bottom: 16px;
+  }
+
+  .customer-main-title-container {
+    margin-top: 36px;
+  }
+
+  .customer-main-cta-row {
+    margin-top: 24px;
+  }
+
+  .gp-title-logo {
+    width: min(52vw, 470px);
+  }
+
+  .gmt-open-button-main {
+    width: 190px;
+    height: 190px;
+    font-size: 20px;
+  }
+
+  .gmt-button-emoji {
+    font-size: 56px;
+  }
+
+  .gmt-button-text {
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 769px) and (max-height: 780px) {
+  .customer-main-shell {
+    padding-top: 28px;
+  }
+
+  .customer-main-title-container {
+    margin-top: 18px;
+  }
+
+  .customer-main-cta-row {
+    margin-top: 18px;
+  }
+
+  .gp-title-logo {
+    width: min(46vw, 390px);
+  }
+
+  .gmt-open-button-main {
+    width: 160px;
+    height: 160px;
+    font-size: 17px;
+  }
+
+  .gmt-button-emoji {
+    font-size: 46px;
+  }
+
+  .gmt-button-text {
+    font-size: 17px;
   }
 }
 
