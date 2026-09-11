@@ -68,6 +68,10 @@ type CircleLike = {
   getRadius: () => number;
 };
 
+function shouldHideLotPricing(lot: ParkingLotMarker) {
+  return lot.id.startsWith("gov-il-") && !lot.externalDatasetId;
+}
+
 type GoogleMapsCircleConstructor = new (options: {
   strokeColor: string;
   strokeOpacity: number;
@@ -217,7 +221,7 @@ function toParkingInfoCard(
   center: LatLng | null,
   lotsInRadius: ParkingLotMarker[]
 ): ParkingInfoCard {
-  const isGovernmentImportedLot = lot.id.startsWith("gov-il-");
+  const shouldHidePricing = shouldHideLotPricing(lot);
   const distance = center ? distanceMeters(center, lot.location) : 0;
   const recommendationCount = Math.max(0, lot.recommendationCount ?? 0);
   const maxRecommendations = Math.max(
@@ -253,18 +257,18 @@ function toParkingInfoCard(
     navigationLat: lot.location.lat,
     navigationLng: lot.location.lng,
     price: effectivePricing.price,
-    hidePricing: isGovernmentImportedLot,
-    bookingLocked: isGovernmentImportedLot,
+    hidePricing: shouldHidePricing,
+    bookingLocked: lot.id.startsWith("gov-il-") && !lot.externalDatasetId,
     pricingLabel: effectivePricing.label,
     pricingRangesTitle: activeSalePricingTiers.length > 0 ? "מחירי מבצע לפי זמן" : "מחירים לפי זמן",
-    pricingRanges: isGovernmentImportedLot ? [] : displayedPricingRanges,
-    originalPriceText: isGovernmentImportedLot
+    pricingRanges: shouldHidePricing ? [] : displayedPricingRanges,
+    originalPriceText: shouldHidePricing
       ? undefined
       : primaryBasePriceText,
-    salePriceText: isGovernmentImportedLot
+    salePriceText: shouldHidePricing
       ? undefined
       : primarySalePriceText,
-    hasActiveSale: isGovernmentImportedLot ? false : activeSalePricingTiers.length > 0,
+    hasActiveSale: shouldHidePricing ? false : activeSalePricingTiers.length > 0,
     distance: `${Math.round(distance)} מ' מהמיקום שנבחר`,
     rating: Math.min(5, Math.max(1, rating)),
     recommendationCount,
@@ -493,7 +497,7 @@ function MapContent({
             <div className="gmt-parking-lot-tooltip">
               <strong>{lot.name}</strong>
               <span>{lot.address}</span>
-              {!lot.id.startsWith("gov-il-") ? (
+              {!shouldHideLotPricing(lot) ? (
                 <span>₪{getEffectiveLotPricing(lot).price} {getEffectiveLotPricing(lot).label}</span>
               ) : null}
             </div>
@@ -834,7 +838,7 @@ export default function GoogleMapTest({ isOpen, onClose }: { isOpen: boolean; on
               const basePricingTiers = getBasePricingTiers(lot);
               const salePricingTiers = getSalePricingTiers(lot);
               const activeSalePricingTiers = getActiveSalePricingTiers(lot);
-              const hasKnownPricing = !lot.id.startsWith("gov-il-");
+              const hasKnownPricing = !shouldHideLotPricing(lot);
 
               const toRecommendationTier = (tier: ParkingPriceTier) => ({
                 price: tier.price,

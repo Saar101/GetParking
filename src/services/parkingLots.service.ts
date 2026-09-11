@@ -30,6 +30,7 @@ export type ParkingLotDoc = {
   activeSaleDurationUnit?: PricingDurationUnit | null;
   activeSaleDurationValue?: number | null;
   activeSaleUpdatedAt?: string | null;
+  externalDatasetId?: string | null;
   ownerId: number;
   createdAt?: unknown;
 };

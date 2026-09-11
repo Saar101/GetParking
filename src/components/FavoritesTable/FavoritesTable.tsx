@@ -36,7 +36,7 @@ function distanceLabel(recommendationCount: number) {
 }
 
 function toFavoriteParkingCard(lot: ParkingLotMarker): FavoriteParkingCard {
-  const isGovernmentImportedLot = lot.id.startsWith("gov-il-");
+  const shouldHidePricing = lot.id.startsWith("gov-il-") && !lot.externalDatasetId;
   const recommendationCount = Math.max(0, lot.recommendationCount ?? 0);
   const rating = Math.min(5, Math.max(1, 1 + recommendationCount / 8));
   const effectivePricing = getEffectiveLotPricing(lot);
@@ -51,8 +51,8 @@ function toFavoriteParkingCard(lot: ParkingLotMarker): FavoriteParkingCard {
     navigationLat: lot.location.lat,
     navigationLng: lot.location.lng,
     price: effectivePricing.price,
-    hidePricing: isGovernmentImportedLot,
-    bookingLocked: isGovernmentImportedLot,
+    hidePricing: shouldHidePricing,
+    bookingLocked: lot.id.startsWith("gov-il-") && !lot.externalDatasetId,
     pricingLabel: effectivePricing.label,
     distance: distanceLabel(recommendationCount),
     rating,
